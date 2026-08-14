@@ -1,902 +1,167 @@
-# Lottery<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-  />
-
-  <title>Crown Lottery</title>
-
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      font-family: Arial, Helvetica, sans-serif;
-      background:
-        radial-gradient(circle at top, #35206b 0%, #17152d 45%, #0b0b16 100%);
-      color: white;
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    button {
-      font: inherit;
-      border: none;
-      cursor: pointer;
-    }
-
-    .app {
-      width: 100%;
-      max-width: 480px;
-      min-height: 100vh;
-      margin: 0 auto;
-      padding: 18px 16px 90px;
-    }
-
-    /* Header */
-
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 22px;
-    }
-
-    .profile {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .avatar {
-      width: 46px;
-      height: 46px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #ffd76a, #ff9d00);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 22px;
-      box-shadow: 0 0 20px rgba(255, 190, 50, 0.35);
-    }
-
-    .username {
-      font-size: 15px;
-      font-weight: 700;
-    }
-
-    .level {
-      color: #aaa7c8;
-      font-size: 12px;
-      margin-top: 3px;
-    }
-
-    .settings {
-      width: 42px;
-      height: 42px;
-      border-radius: 14px;
-      background: rgba(255,255,255,0.08);
-      color: white;
-      font-size: 19px;
-    }
-
-    /* Balance */
-
-    .balance-card {
-      position: relative;
-      background: linear-gradient(
-        145deg,
-        rgba(255,255,255,0.13),
-        rgba(255,255,255,0.04)
-      );
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 24px;
-      padding: 22px;
-      text-align: center;
-      overflow: hidden;
-      margin-bottom: 14px;
-    }
-
-    .balance-card::before {
-      content: "";
-      position: absolute;
-      width: 160px;
-      height: 160px;
-      background: rgba(255, 190, 50, 0.16);
-      filter: blur(50px);
-      border-radius: 50%;
-      top: -80px;
-      left: calc(50% - 80px);
-    }
-
-    .balance-label {
-      color: #aaa7c8;
-      font-size: 12px;
-      position: relative;
-    }
-
-    .balance {
-      font-size: 36px;
-      font-weight: 800;
-      margin-top: 5px;
-      position: relative;
-    }
-
-    .coin {
-      color: #ffd45e;
-    }
-
-    .balance-name {
-      color: #817d9f;
-      font-size: 12px;
-      margin-top: 4px;
-    }
-
-    /* Jackpot */
-
-    .jackpot {
-      background: linear-gradient(135deg, #6e3edb, #4022a0);
-      border-radius: 24px;
-      padding: 20px;
-      margin-bottom: 14px;
-      box-shadow: 0 12px 35px rgba(70, 35, 180, 0.3);
-    }
-
-    .jackpot-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .jackpot-title {
-      font-size: 13px;
-      color: #ddd5ff;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-    }
-
-    .crown {
-      font-size: 27px;
-    }
-
-    .jackpot-amount {
-      font-size: 31px;
-      font-weight: 800;
-      margin: 8px 0 4px;
-    }
-
-    .jackpot-sub {
-      font-size: 11px;
-      color: #c5b9f5;
-    }
-
-    .timer {
-      margin-top: 15px;
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 7px;
-    }
-
-    .time-box {
-      background: rgba(0,0,0,0.18);
-      border-radius: 12px;
-      text-align: center;
-      padding: 9px 3px;
-    }
-
-    .time-number {
-      font-size: 17px;
-      font-weight: 800;
-    }
-
-    .time-label {
-      color: #bdb4df;
-      font-size: 9px;
-      margin-top: 3px;
-    }
-
-    /* Play */
-
-    .play-button {
-      width: 100%;
-      height: 62px;
-      border-radius: 20px;
-      background: linear-gradient(135deg, #ffd75e, #ff9d00);
-      color: #251500;
-      font-size: 19px;
-      font-weight: 900;
-      box-shadow: 0 10px 30px rgba(255, 170, 30, 0.25);
-      margin-bottom: 14px;
-      transition: transform 0.15s;
-    }
-
-    .play-button:active {
-      transform: scale(0.97);
-    }
-
-    /* Stats */
-
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-      margin-bottom: 18px;
-    }
-
-    .stat {
-      background: rgba(255,255,255,0.055);
-      border: 1px solid rgba(255,255,255,0.07);
-      border-radius: 17px;
-      padding: 15px;
-    }
-
-    .stat-title {
-      color: #8e8aa8;
-      font-size: 11px;
-    }
-
-    .stat-value {
-      font-size: 20px;
-      font-weight: 800;
-      margin-top: 6px;
-    }
-
-    /* Sections */
-
-    .section-title {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin: 20px 0 10px;
-    }
-
-    .section-title h2 {
-      font-size: 17px;
-    }
-
-    .section-title span {
-      font-size: 11px;
-      color: #8e86b3;
-    }
-
-    /* Missions */
-
-    .mission {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: rgba(255,255,255,0.055);
-      border: 1px solid rgba(255,255,255,0.07);
-      border-radius: 17px;
-      padding: 13px;
-      margin-bottom: 9px;
-    }
-
-    .mission-icon {
-      width: 42px;
-      height: 42px;
-      border-radius: 13px;
-      background: rgba(255,210,80,0.12);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 19px;
-    }
-
-    .mission-info {
-      flex: 1;
-    }
-
-    .mission-name {
-      font-size: 13px;
-      font-weight: 700;
-    }
-
-    .mission-reward {
-      font-size: 10px;
-      color: #ffd35b;
-      margin-top: 4px;
-    }
-
-    .mission-button {
-      background: rgba(255,255,255,0.08);
-      color: white;
-      padding: 8px 11px;
-      border-radius: 10px;
-      font-size: 10px;
-      font-weight: 700;
-    }
-
-    /* Lottery */
-
-    .lottery-card {
-      background: rgba(255,255,255,0.055);
-      border: 1px solid rgba(255,255,255,0.07);
-      border-radius: 20px;
-      padding: 18px;
-    }
-
-    .lottery-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-
-    .lottery-row:last-child {
-      margin-bottom: 0;
-    }
-
-    .lottery-label {
-      color: #908ca9;
-      font-size: 11px;
-    }
-
-    .lottery-value {
-      font-weight: 800;
-      font-size: 14px;
-    }
-
-    .ticket {
-      color: #ffd45e;
-    }
-
-    .lottery-button {
-      width: 100%;
-      margin-top: 16px;
-      padding: 13px;
-      border-radius: 14px;
-      background: rgba(124, 77, 255, 0.25);
-      color: #d9ccff;
-      font-weight: 800;
-    }
-
-    /* Bottom nav */
-
-    .bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 100%;
-      max-width: 480px;
-      height: 72px;
-      background: rgba(13, 12, 27, 0.94);
-      backdrop-filter: blur(15px);
-      border-top: 1px solid rgba(255,255,255,0.07);
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      padding: 8px 10px;
-      z-index: 100;
-    }
-
-    .nav-item {
-      background: transparent;
-      color: #77738d;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      gap: 4px;
-      border-radius: 14px;
-      font-size: 18px;
-    }
-
-    .nav-item span {
-      font-size: 9px;
-    }
-
-    .nav-item.active {
-      color: #ffd45e;
-      background: rgba(255,210,80,0.08);
-    }
-
-    /* Toast */
-
-    .toast {
-      position: fixed;
-      top: 18px;
-      left: 50%;
-      transform: translate(-50%, -100px);
-      background: #242039;
-      border: 1px solid rgba(255,255,255,0.1);
-      color: white;
-      padding: 12px 18px;
-      border-radius: 14px;
-      font-size: 12px;
-      transition: transform 0.25s ease;
-      z-index: 999;
-      white-space: nowrap;
-    }
-
-    .toast.show {
-      transform: translate(-50%, 0);
-    }
-
-    @media (max-width: 350px) {
-      .balance {
-        font-size: 30px;
-      }
-
-      .jackpot-amount {
-        font-size: 26px;
-      }
-    }
-  </style>
-</head>
-
-<body>
-
-  <div class="app">
-
-    <!-- Header -->
-    <header class="header">
-
-      <div class="profile">
-        <div class="avatar">👑</div>
-
-        <div>
-          <div class="username" id="username">Crown Player</div>
-          <div class="level">Level 1 · Beginner</div>
-        </div>
-      </div>
-
-      <button class="settings" onclick="showToast('Settings coming soon')">
-        ⚙️
-      </button>
-
-    </header>
-
-
-    <!-- Balance -->
-    <section class="balance-card">
-
-      <div class="balance-label">
-        YOUR BALANCE
-      </div>
-
-      <div class="balance">
-        <span id="coins">2,450</span>
-        <span class="coin">🪙</span>
-      </div>
-
-      <div class="balance-name">
-        Crown Coins
-      </div>
-
-    </section>
-
-
-    <!-- Jackpot -->
-    <section class="jackpot">
-
-      <div class="jackpot-top">
-
-        <div>
-          <div class="jackpot-title">
-            WEEKLY JACKPOT
-          </div>
-
-          <div class="jackpot-amount">
-            $25,840
-          </div>
-
-          <div class="jackpot-sub">
-            Current prize pool
-          </div>
-        </div>
-
-        <div class="crown">
-          👑
-        </div>
-
-      </div>
-
-
-      <div class="timer">
-
-        <div class="time-box">
-          <div class="time-number" id="days">03</div>
-          <div class="time-label">DAYS</div>
-        </div>
-
-        <div class="time-box">
-          <div class="time-number" id="hours">12</div>
-          <div class="time-label">HOURS</div>
-        </div>
-
-        <div class="time-box">
-          <div class="time-number" id="minutes">48</div>
-          <div class="time-label">MIN</div>
-        </div>
-
-        <div class="time-box">
-          <div class="time-number" id="seconds">32</div>
-          <div class="time-label">SEC</div>
-        </div>
-
-      </div>
-
-    </section>
-
-
-    <!-- Play -->
-    <button class="play-button" onclick="playGame()">
-      ▶ PLAY CROWN
-    </button>
-
-
-    <!-- Stats -->
-    <section class="stats">
-
-      <div class="stat">
-        <div class="stat-title">YOUR TICKETS</div>
-        <div class="stat-value">
-          🎟 <span id="tickets">18</span>
-        </div>
-      </div>
-
-      <div class="stat">
-        <div class="stat-title">PLAYERS</div>
-        <div class="stat-value">12,842</div>
-      </div>
-
-    </section>
-
-
-    <!-- Missions -->
-    <div class="section-title">
-      <h2>Daily Missions</h2>
-      <span>VIEW ALL</span>
-    </div>
-
-
-    <div class="mission">
-
-      <div class="mission-icon">
-        🎮
-      </div>
-
-      <div class="mission-info">
-        <div class="mission-name">
-          Play 3 Games
-        </div>
-
-        <div class="mission-reward">
-          +5 Tickets
-        </div>
-      </div>
-
-      <button
-        class="mission-button"
-        onclick="showToast('Mission started')"
-      >
-        PLAY
-      </button>
-
-    </div>
-
-
-    <div class="mission">
-
-      <div class="mission-icon">
-        🎁
-      </div>
-
-      <div class="mission-info">
-        <div class="mission-name">
-          Claim Daily Reward
-        </div>
-
-        <div class="mission-reward">
-          +250 Coins
-        </div>
-      </div>
-
-      <button
-        class="mission-button"
-        onclick="claimReward()"
-      >
-        CLAIM
-      </button>
-
-    </div>
-
-
-    <div class="mission">
-
-      <div class="mission-icon">
-        👥
-      </div>
-
-      <div class="mission-info">
-        <div class="mission-name">
-          Invite a Friend
-        </div>
-
-        <div class="mission-reward">
-          +10 Tickets
-        </div>
-      </div>
-
-      <button
-        class="mission-button"
-        onclick="showToast('Referral system coming soon')"
-      >
-        INVITE
-      </button>
-
-    </div>
-
-
-    <!-- Lottery -->
-    <div class="section-title">
-      <h2>Lottery</h2>
-      <span>WEEKLY DRAW</span>
-    </div>
-
-
-    <section class="lottery-card">
-
-      <div class="lottery-row">
-
-        <div class="lottery-label">
-          Your entries
-        </div>
-
-        <div class="lottery-value ticket">
-          🎟 18 Tickets
-        </div>
-
-      </div>
-
-
-      <div class="lottery-row">
-
-        <div class="lottery-label">
-          Next draw
-        </div>
-
-        <div class="lottery-value">
-          Sunday
-        </div>
-
-      </div>
-
-
-      <div class="lottery-row">
-
-        <div class="lottery-label">
-          Prize pool
-        </div>
-
-        <div class="lottery-value">
-          $25,840
-        </div>
-
-      </div>
-
-
-      <button
-        class="lottery-button"
-        onclick="showToast('Lottery details coming soon')"
-      >
-        VIEW LOTTERY
-      </button>
-
-    </section>
-
-  </div>
-
-
-  <!-- Bottom Navigation -->
-
-  <nav class="bottom-nav">
-
-    <button class="nav-item active" onclick="changeTab(this)">
-      🏠
-      <span>Home</span>
-    </button>
-
-    <button class="nav-item" onclick="changeTab(this)">
-      🎮
-      <span>Play</span>
-    </button>
-
-    <button class="nav-item" onclick="changeTab(this)">
-      🎟
-      <span>Lottery</span>
-    </button>
-
-    <button class="nav-item" onclick="changeTab(this)">
-      👤
-      <span>Profile</span>
-    </button>
-
-  </nav>
-
-
-  <div class="toast" id="toast"></div>
-
-
-  <script>
-
-    /*
-      Telegram Mini App initialization
-    */
-
-    const tg = window.Telegram?.WebApp;
-
-    if (tg) {
-      tg.ready();
-      tg.expand();
-
-      const user = tg.initDataUnsafe?.user;
-
-      if (user) {
-        const name =
-          user.first_name ||
-          user.username ||
-          "Crown Player";
-
-        document.getElementById("username").textContent = name;
-      }
-    }
-
-
-    /*
-      Play button
-    */
-
-    function playGame() {
-
-      let coins =
-        parseInt(
-          document.getElementById("coins").textContent.replace(",", "")
-        );
-
-      let tickets =
-        parseInt(
-          document.getElementById("tickets").textContent
-        );
-
-      coins += 50;
-
-      if (Math.random() > 0.6) {
-        tickets += 1;
-      }
+# 🎰 Lottery Arcade
 
-      document.getElementById("coins").textContent =
-        coins.toLocaleString();
+A fun and interactive mini-games arcade application built with React and Vite. Play games, collect virtual tokens, and level up!
 
-      document.getElementById("tickets").textContent =
-        tickets;
+## 🎮 Features
 
-      showToast("+50 Coins earned!");
-    }
+- **5 Mini Games**: Crash, Mines, Poker, Plinko, and Lucky Wheel
+- **Token System**: Earn and spend virtual tokens
+- **Leveling System**: Gain XP and progress through levels
+- **Leaderboard**: Compete with other players
+- **Daily Rewards**: Claim free tokens every day
+- **Responsive Design**: Works on desktop and mobile devices
+- **Local Storage**: Your progress is automatically saved
 
+## 🚀 Getting Started
 
-    /*
-      Daily reward
-    */
+### Prerequisites
 
-    function claimReward() {
+- Node.js (v14 or higher)
+- npm or yarn
 
-      let coins =
-        parseInt(
-          document.getElementById("coins").textContent.replace(",", "")
-        );
+### Installation
 
-      coins += 250;
+1. Clone the repository:
+```bash
+git clone https://github.com/lotterycrown/Lottery.git
+cd Lottery
+```
 
-      document.getElementById("coins").textContent =
-        coins.toLocaleString();
+2. Install dependencies:
+```bash
+npm install
+```
 
-      showToast("+250 Coins claimed!");
-    }
+### Development
 
+Start the development server:
+```bash
+npm run dev
+```
 
-    /*
-      Bottom navigation
-    */
+The app will be available at `http://localhost:5173`
 
-    function changeTab(button) {
+### Build
 
-      document
-        .querySelectorAll(".nav-item")
-        .forEach(item => item.classList.remove("active"));
+Build for production:
+```bash
+npm run build
+```
 
-      button.classList.add("active");
+### Preview
 
-      const label =
-        button.querySelector("span").textContent;
+Preview the production build:
+```bash
+npm run preview
+```
 
-      if (label !== "Home") {
-        showToast(label + " section coming soon");
-      }
-    }
+## 📁 Project Structure
 
+```
+src/
+  ├── App.js          # Main app component with all games and styling
+  ├── main.jsx        # React entry point
+  └── index.css       # Global styles
 
-    /*
-      Toast notification
-    */
+public/
+  └── index.html      # HTML template
 
-    function showToast(message) {
+package.json          # Project dependencies and scripts
+vite.config.js        # Vite configuration
+.gitignore            # Git ignore rules
+```
 
-      const toast =
-        document.getElementById("toast");
+## 🎯 How It Works
 
-      toast.textContent = message;
+1. **Home Page**: View your balance, level, and available games
+2. **Play Games**: Click on any game card to start playing
+3. **Earn Tokens**: Win virtual tokens by playing mini-games
+4. **Level Up**: Earn XP to increase your level
+5. **Profile**: Check your stats and leaderboard ranking
+6. **Daily Reward**: Claim 100 free tokens every day
 
-      toast.classList.add("show");
+## 🎮 Games Overview
 
-      setTimeout(() => {
-        toast.classList.remove("show");
-      }, 1800);
-    }
+### Crash 🚀
+Watch the multiplier rise and collect your virtual reward before it crashes!
 
+### Mines 💎
+Find all diamonds without hitting a mine. Complete all 10 to win a bonus!
 
-    /*
-      Demo countdown
+### Poker 🃏
+Deal cards and get rewarded based on hand quality.
 
-      Later this will come from the backend
-      and the actual lottery round.
-    */
+### Plinko 🔮
+Drop balls and watch them fall into reward slots. Each slot has a different prize!
 
-    let totalSeconds =
-      (3 * 24 * 60 * 60) +
-      (12 * 60 * 60) +
-      (48 * 60) +
-      32;
+### Lucky Wheel 🎡
+Spin the lucky wheel to win variable token amounts (10-150 tokens).
 
+## 💾 Data Persistence
 
-    function updateTimer() {
+All player data is stored in browser's localStorage:
+- `lottery_tokens`: Your current token balance
+- `lottery_xp`: Your accumulated experience points
 
-      if (totalSeconds <= 0) {
-        totalSeconds = 7 * 24 * 60 * 60;
-      }
+Data persists across browser sessions automatically.
 
-      const days =
-        Math.floor(totalSeconds / 86400);
+## 🛠 Technologies Used
 
-      const hours =
-        Math.floor((totalSeconds % 86400) / 3600);
+- **React 18**: Modern UI framework
+- **Vite**: Lightning-fast build tool and dev server
+- **CSS-in-JS**: All styling is embedded in App.js for simplicity
 
-      const minutes =
-        Math.floor((totalSeconds % 3600) / 60);
+## 📦 Available Scripts
 
-      const seconds =
-        totalSeconds % 60;
+- `npm run dev` - Start development server with hot reload
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build locally
 
-      document.getElementById("days").textContent =
-        String(days).padStart(2, "0");
+## 🎓 Game Mechanics
 
-      document.getElementById("hours").textContent =
-        String(hours).padStart(2, "0");
+### Token System
+- Start with 1,000 tokens
+- Earn tokens by playing games
+- Higher difficulty = higher rewards
+- Minimum starting bet: 10 tokens
 
-      document.getElementById("minutes").textContent =
-        String(minutes).padStart(2, "0");
+### XP & Leveling
+- Gain 1 XP per 10 tokens earned
+- Level increases every 100 XP
+- Higher levels unlock better games
 
-      document.getElementById("seconds").textContent =
-        String(seconds).padStart(2, "0");
+### Daily Login Reward
+- Claim 100 free tokens daily
+- Reset automatically at midnight
+- No limit on how many days you can claim
 
-      totalSeconds--;
-    }
+## 🐛 Known Limitations
 
+This is a demo/prototype version with the following limitations:
+- All games use random number generation
+- No backend integration yet
+- No user authentication
+- No multiplayer features
+- Data resets when browser cache is cleared
 
-    updateTimer();
+## 🚀 Future Enhancements
 
-    setInterval(updateTimer, 1000);
+- Backend integration for persistent data
+- Real-time multiplayer games
+- User authentication and leaderboards
+- Payment integration
+- Mobile app version
+- Advanced game mechanics
+- Tournaments and competitions
 
-  </script>
+## 📝 License
 
-</body>
-</html>
+This project is open source and available under the MIT License.
+
+## 👨‍💻 Author
+
+**lotterycrown**
+
+---
+
+**Ready to play? Start earning tokens now! 🎉**
