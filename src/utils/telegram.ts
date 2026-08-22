@@ -8,6 +8,13 @@ interface TelegramWebApp {
   ready?: () => void;
   expand?: () => void;
   isExpanded?: boolean;
+  initData?: string;
+  initDataUnsafe?: {
+    user?: {
+      id?: number;
+      username?: string;
+    };
+  };
 }
 
 let telegramWebApp: TelegramWebApp | null = null;
@@ -17,9 +24,10 @@ let telegramWebApp: TelegramWebApp | null = null;
  */
 export const initializeTelegram = (): void => {
   if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
-    telegramWebApp = (window as any).Telegram.WebApp;
-    telegramWebApp.ready?.();
-    telegramWebApp.expand?.();
+    const webApp = (window as any).Telegram.WebApp as TelegramWebApp;
+    telegramWebApp = webApp;
+    webApp.ready?.();
+    webApp.expand?.();
   }
 };
 
@@ -47,3 +55,17 @@ export const getTelegramStatus = () => ({
   isAvailable: isTelegramMiniApp(),
   isExpanded: telegramWebApp?.isExpanded ?? false,
 });
+
+export const getTelegramInitData = (): string => {
+  if (telegramWebApp?.initData && telegramWebApp.initData.length > 0) {
+    return telegramWebApp.initData;
+  }
+
+  if (import.meta.env.DEV) {
+    const devId = telegramWebApp?.initDataUnsafe?.user?.id ?? 1;
+    const devUsername = telegramWebApp?.initDataUnsafe?.user?.username ?? 'dev';
+    return `dev:${devId}:${devUsername}`;
+  }
+
+  return '';
+};

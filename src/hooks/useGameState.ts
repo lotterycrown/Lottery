@@ -1,63 +1,83 @@
-/**
- * Game state management hook.
- * Manages player progress and persistence.
- */
+import { useCallback, useEffect, useState } from 'react';
+import { authenticateTelegram } from '../api/authApi';
+import { fetchGameState, submitTap } from '../api/gameApi';
+import type { ClientTask, GameStateDTO } from '../../shared/types/api';
+import type { PlayerProgress } from '../game/playerState';
+import { getTelegramInitData } from '../utils/telegram';
+import { getMigrationCandidate, markMigrationComplete, savePlayerState } from '../utils/storage';
 
-import { useState, useEffect, useCallback } from 'react';
-import { PlayerProgress, createInitialPlayerState } from '../game/playerState';
-import { loadPlayerState, savePlayerState } from '../utils/storage';
-import { GAME_CONFIG } from '../game/gameConfig';
+const toPlayerProgress = (state: GameStateDTO): PlayerProgress => ({
+  level: state.progress.level,
+  xp: state.progress.xp,
+  coins: state.progress.coins,
+  coinsMicro: state.progress.coinsMicro,
+  totalTaps: state.progress.totalTaps,
+  crownTier: state.progress.crownTier,
+});
 
 export const useGameState = () => {
   const [playerState, setPlayerState] = useState<PlayerProgress | null>(null);
+  const [tasks, setTasks] = useState<ClientTask[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load initial state from storage
-  useEffect(() => {
-    const loaded = loadPlayerState();
-    setPlayerState(loaded);
+  const hydrateFromServerState = useCallback((state: GameStateDTO) => {
+    const mapped = toPlayerProgress(state);
+    setPlayerState(mapped);
+    setTasks(state.tasks);
+    savePlayerState(mapped);
+    setError(null);
+    setIsLoading(false);
   }, []);
 
-  // Save state whenever it changes
   useEffect(() => {
-    if (playerState) {
-      savePlayerState(playerState);
+    const bootstrap = async () => {
+      setIsLoading(true);
+
+      try {
+        const initData = getTelegramInitData();
+        const migration = getMigrationCandidate();
+        const auth = await authenticateTelegram(initData, migration);
+        if (migration?.completed) {
+          markMigrationComplete();
+        }
+        hydrateFromServerState(auth.state);
+      } catch {
+        try {
+          const state = await fetchGameState();
+          hydrateFromServerState(state);
+        } catch (bootstrapError) {
+          setError(bootstrapError instanceof Error ? bootstrapError.message : 'Failed to initialize game');
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void bootstrap();
+  }, [hydrateFromServerState]);
+
+  const handleTap = useCallback(async () => {
+    if (!playerState) {
+      return;
     }
-  }, [playerState]);
 
-  const addCoins = useCallback((amount: number) => {
-    setPlayerState((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        coins: Math.round((prev.coins + amount) * 100000) / 100000, // Avoid floating point errors
-      };
-    });
-  }, []);
+    const requestId = crypto.randomUUID();
 
-  const incrementTaps = useCallback(() => {
-    setPlayerState((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        totalTaps: prev.totalTaps + 1,
-      };
-    });
-  }, []);
-
-  const handleTap = useCallback(() => {
-    addCoins(GAME_CONFIG.tapReward);
-    incrementTaps();
-  }, [addCoins, incrementTaps]);
-
-  const reset = useCallback(() => {
-    setPlayerState(createInitialPlayerState());
-  }, []);
+    try {
+      const state = await submitTap(requestId);
+      hydrateFromServerState(state);
+    } catch (tapError) {
+      setError(tapError instanceof Error ? tapError.message : 'Tap failed');
+    }
+  }, [hydrateFromServerState, playerState]);
 
   return {
     playerState,
+    tasks,
+    isLoading,
+    error,
+    setError,
+    hydrateFromServerState,
     handleTap,
-    addCoins,
-    incrementTaps,
-    reset,
   };
 };

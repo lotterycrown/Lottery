@@ -13,7 +13,7 @@ import { useGameState } from '../hooks/useGameState';
 import { useTapEffect } from '../hooks/useTapEffect';
 
 export const Home: React.FC = () => {
-  const { playerState, handleTap } = useGameState();
+  const { playerState, handleTap, isLoading, error } = useGameState();
   const { tapEffect, triggerTap, updateParticles } = useTapEffect();
 
   // Update particles every frame
@@ -25,16 +25,16 @@ export const Home: React.FC = () => {
     return () => clearInterval(interval);
   }, [updateParticles]);
 
-  const handleCrownTap = (e: React.PointerEvent<HTMLDivElement>) => {
+  const handleCrownTap = async (e: React.PointerEvent<HTMLDivElement>) => {
     const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
     const x = rect.left + rect.width / 2;
     const y = rect.top + rect.height / 2;
 
     triggerTap(x, y);
-    handleTap();
+    await handleTap();
   };
 
-  if (!playerState) {
+  if (isLoading || !playerState) {
     return <div className="w-full h-screen bg-matte-black" />;
   }
 
@@ -57,6 +57,12 @@ export const Home: React.FC = () => {
 
       {/* Header */}
       <Header level={playerState.level} balance={playerState.coins} />
+
+      {error && (
+        <div className="px-4 py-2 text-center text-xs text-red-300 bg-red-950/30 border border-red-900/60 mx-4 rounded-xl">
+          {error}
+        </div>
+      )}
 
       {/* Main content */}
       <div className="flex-1 flex flex-col items-center justify-center gap-8 pb-24">

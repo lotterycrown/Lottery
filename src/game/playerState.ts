@@ -6,6 +6,7 @@ export interface PlayerProgress {
   level: number;
   xp: number;
   coins: number;
+  coinsMicro: number;
   totalTaps: number;
   crownTier: string;
 }
@@ -17,6 +18,7 @@ export const createInitialPlayerState = (config?: Partial<PlayerProgress>): Play
   level: 1,
   xp: 0,
   coins: 0,
+  coinsMicro: 0,
   totalTaps: 0,
   crownTier: 'bronze_1',
   ...config,
