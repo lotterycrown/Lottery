@@ -20,6 +20,7 @@ export const TapReward: React.FC<TapRewardProps> = ({ x, y, opacity }) => {
       style={{
         left: `${x}px`,
         top: `${y}px`,
+        opacity,
       }}
       initial={{ opacity: 1, y: 0 }}
       animate={{
