@@ -1,167 +1,159 @@
-# 🎰 Lottery Arcade
+# Crown Tap Game - Step 1
 
-A fun and interactive mini-games arcade application built with React and Vite. Play games, collect virtual tokens, and level up!
+A premium dark tap game built for Telegram Mini Apps.
 
-## 🎮 Features
+## Features
 
-- **5 Mini Games**: Crash, Mines, Poker, Plinko, and Lucky Wheel
-- **Token System**: Earn and spend virtual tokens
-- **Leveling System**: Gain XP and progress through levels
-- **Leaderboard**: Compete with other players
-- **Daily Rewards**: Claim free tokens every day
-- **Responsive Design**: Works on desktop and mobile devices
-- **Local Storage**: Your progress is automatically saved
+✨ **Step 1 Complete:**
+- Bronze crown with metallic 3D visuals
+- Smooth tap mechanics with instant feedback
+- Coin particles burst effect
+- Floating reward text animation
+- Local storage persistence
+- Telegram Mini App ready
+- Mobile-first responsive design
+- Accessibility support
+- TypeScript + React + Vite
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
-
-- Node.js (v14 or higher)
+- Node.js 16+
 - npm or yarn
 
 ### Installation
 
-1. Clone the repository:
-```bash
-git clone https://github.com/lotterycrown/Lottery.git
-cd Lottery
-```
-
-2. Install dependencies:
 ```bash
 npm install
 ```
 
 ### Development
 
-Start the development server:
 ```bash
 npm run dev
 ```
 
-The app will be available at `http://localhost:5173`
+The game will open at `http://localhost:3000`
 
-### Build
+### Production Build
 
-Build for production:
 ```bash
 npm run build
 ```
 
-### Preview
+### Preview Production Build
 
-Preview the production build:
 ```bash
 npm run preview
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 src/
-  ├── App.js          # Main app component with all games and styling
-  ├── main.jsx        # React entry point
-  └── index.css       # Global styles
-
-public/
-  └── index.html      # HTML template
-
-package.json          # Project dependencies and scripts
-vite.config.js        # Vite configuration
-.gitignore            # Git ignore rules
+├── components/       # React components
+│   ├── Crown.tsx            # 3D metallic crown
+│   ├── CoinParticles.tsx    # Particle effects
+│   ├── Header.tsx           # Top UI
+│   ├── Balance.tsx          # Coin display
+│   ├── TapReward.tsx        # Floating text
+│   └── BottomNavigation.tsx # Nav bar
+├── game/            # Game logic
+│   ├── gameConfig.ts        # Configuration
+│   ├── playerState.ts       # Data structures
+│   └── tapEngine.ts         # (Placeholder)
+├── hooks/           # React hooks
+│   ├── useGameState.ts      # State management
+│   └── useTapEffect.ts      # Tap animations
+├── utils/           # Utilities
+│   ├── storage.ts           # localStorage wrapper
+│   ├── telegram.ts          # Telegram adapter
+│   └── particle.ts          # Particle system
+├── pages/           # Pages
+│   └── Home.tsx             # Main screen
+├── styles/          # Global styles
+│   └── globals.css          # Tailwind + custom
+├── App.tsx          # Root component
+└── main.tsx         # Entry point
 ```
 
-## 🎯 How It Works
+## Tap Mechanics
 
-1. **Home Page**: View your balance, level, and available games
-2. **Play Games**: Click on any game card to start playing
-3. **Earn Tokens**: Win virtual tokens by playing mini-games
-4. **Level Up**: Earn XP to increase your level
-5. **Profile**: Check your stats and leaderboard ranking
-6. **Daily Reward**: Claim 100 free tokens every day
+### How it Works
 
-## 🎮 Games Overview
+1. **Tap Detection**: Click/touch the crown → `useTapEffect` triggers
+2. **Particle Creation**: 12 particles spawn at tap location
+3. **Animation**: 
+   - Crown scales down to 0.96, bounces back
+   - Particles burst outward with gravity
+   - Reward text (+0.001) floats up
+4. **State Update**: `useGameState` adds coins and tap count
+5. **Persistence**: `localStorage` saves after every tap
 
-### Crash 🚀
-Watch the multiplier rise and collect your virtual reward before it crashes!
+### Performance
 
-### Mines 💎
-Find all diamonds without hitting a mine. Complete all 10 to win a bonus!
+- Particles capped at 80 max (configurable)
+- requestAnimationFrame for smooth 60 FPS
+- Respects `prefers-reduced-motion` setting
+- Efficient React re-renders via hooks
 
-### Poker 🃏
-Deal cards and get rewarded based on hand quality.
+## Technologies
 
-### Plinko 🔮
-Drop balls and watch them fall into reward slots. Each slot has a different prize!
+- **React 18** - UI framework
+- **TypeScript** - Type safety
+- **Vite** - Build tool
+- **Tailwind CSS** - Styling
+- **Framer Motion** - Animations
+- **localStorage** - State persistence
 
-### Lucky Wheel 🎡
-Spin the lucky wheel to win variable token amounts (10-150 tokens).
+## Configuration
 
-## 💾 Data Persistence
+Edit `src/game/gameConfig.ts` to customize:
 
-All player data is stored in browser's localStorage:
-- `lottery_tokens`: Your current token balance
-- `lottery_xp`: Your accumulated experience points
+```typescript
+export const GAME_CONFIG = {
+  tapReward: 0.001,          // Coins per tap
+  maxParticles: 80,          // Particle limit
+  particleLifetime: 1000,    // Duration (ms)
+  particleGravity: 0.005,    // Physics
+  crownTapDuration: 300,     // Animation speed
+  // ... more config
+};
+```
 
-Data persists across browser sessions automatically.
+## Telegram Integration
 
-## 🛠 Technologies Used
+The game works:
+- ✅ In Telegram Mini Apps
+- ✅ In regular browsers
+- ✅ On desktop and mobile
 
-- **React 18**: Modern UI framework
-- **Vite**: Lightning-fast build tool and dev server
-- **CSS-in-JS**: All styling is embedded in App.js for simplicity
+See `src/utils/telegram.ts` for the adapter.
 
-## 📦 Available Scripts
+## Storage
 
-- `npm run dev` - Start development server with hot reload
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build locally
+Player state stored in `localStorage` with key: `crown_tap_game_player_state`
 
-## 🎓 Game Mechanics
+**Note**: This is temporary/demo data. Backend will replace this in future steps.
 
-### Token System
-- Start with 1,000 tokens
-- Earn tokens by playing games
-- Higher difficulty = higher rewards
-- Minimum starting bet: 10 tokens
+## Accessibility
 
-### XP & Leveling
-- Gain 1 XP per 10 tokens earned
-- Level increases every 100 XP
-- Higher levels unlock better games
+- ♿ Keyboard support (Tab to crown, Enter/Space to tap)
+- 🎨 Focus rings for visibility
+- 🤸 Respects `prefers-reduced-motion`
+- 📝 ARIA labels
 
-### Daily Login Reward
-- Claim 100 free tokens daily
-- Reset automatically at midnight
-- No limit on how many days you can claim
+## Next Steps
 
-## 🐛 Known Limitations
+Future implementation:
+- Backend integration
+- Database persistence
+- Level system
+- Tasks system
+- Wallet & withdrawals
+- Admin panel
+- NFT rewards
 
-This is a demo/prototype version with the following limitations:
-- All games use random number generation
-- No backend integration yet
-- No user authentication
-- No multiplayer features
-- Data resets when browser cache is cleared
+## License
 
-## 🚀 Future Enhancements
-
-- Backend integration for persistent data
-- Real-time multiplayer games
-- User authentication and leaderboards
-- Payment integration
-- Mobile app version
-- Advanced game mechanics
-- Tournaments and competitions
-
-## 📝 License
-
-This project is open source and available under the MIT License.
-
-## 👨‍💻 Author
-
-**lotterycrown**
-
----
-
-**Ready to play? Start earning tokens now! 🎉**
+MIT
