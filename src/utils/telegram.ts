@@ -17,9 +17,10 @@ let telegramWebApp: TelegramWebApp | null = null;
  */
 export const initializeTelegram = (): void => {
   if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
-    telegramWebApp = (window as any).Telegram.WebApp;
-    telegramWebApp.ready?.();
-    telegramWebApp.expand?.();
+    const webApp = (window as any).Telegram.WebApp as TelegramWebApp;
+    telegramWebApp = webApp;
+    webApp.ready?.();
+    webApp.expand?.();
   }
 };
 

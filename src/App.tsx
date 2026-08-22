@@ -2,7 +2,7 @@
  * Root application component.
  */
 
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { Home } from './pages/Home';
 import { initializeTelegram } from './utils/telegram';
 

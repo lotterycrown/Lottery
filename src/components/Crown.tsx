@@ -3,7 +3,7 @@
  * 3D-looking metallic crown with idle animations.
  */
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { GAME_CONFIG } from '../game/gameConfig';
 
@@ -44,6 +44,7 @@ export const Crown: React.FC<CrownProps> = ({
       tabIndex={0}
       aria-label="Tap the crown to earn coins"
       animate={{
+        scale,
         y: prefersReducedMotion ? 0 : [0, -8, 0],
         rotateZ: prefersReducedMotion ? 0 : [0, 1, -1, 0],
       }}
