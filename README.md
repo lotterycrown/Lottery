@@ -1,10 +1,10 @@
-# Crown Tap Game - Step 1
+# Crown Tap Game - Rewarded Ads Architecture
 
 A premium dark tap game built for Telegram Mini Apps.
 
 ## Features
 
-✨ **Step 1 Complete:**
+✨ **Core Gameplay:**
 - Bronze crown with metallic 3D visuals
 - Smooth tap mechanics with instant feedback
 - Coin particles burst effect
@@ -14,6 +14,15 @@ A premium dark tap game built for Telegram Mini Apps.
 - Mobile-first responsive design
 - Accessibility support
 - TypeScript + React + Vite
+
+🆕 **Build Step 5 — Rewarded Ads:**
+- Provider abstraction (`AdProvider`) with factory (`mock` / `telegram`)
+- `AdManager` service to orchestrate session → watch → verify flow
+- Ads UI card with reward amount, daily counters, cooldown state
+- Backend ad API architecture (`/api/ads/config|session|reward|status`)
+- Prisma data models/migration for `AdConfig`, `AdSession`, `AdDailyUsage`, `AdEvent`, and `RewardTransaction` ad source tracking
+- Per-user rate limits for session/reward endpoints
+- Development-safe `MockAdProvider` blocked in production
 
 ## Getting Started
 
@@ -39,6 +48,15 @@ The game will open at `http://localhost:3000`
 
 ```bash
 npm run build
+```
+
+### Rewarded Ads Backend (new)
+
+```bash
+npm run prisma:generate
+npm run prisma:migrate
+npm run prisma:seed
+npm run server:dev
 ```
 
 ### Preview Production Build
@@ -75,7 +93,65 @@ src/
 │   └── globals.css          # Tailwind + custom
 ├── App.tsx          # Root component
 └── main.tsx         # Entry point
+
+src/ads/
+├── types.ts
+├── AdManager.ts
+├── api/AdApiClient.ts
+└── providers/
+    ├── MockAdProvider.ts
+    ├── TelegramAdProvider.ts
+    └── factory.ts
+
+server/src/
+├── app.ts
+├── server.ts
+├── config/adConfig.ts
+├── controllers/AdController.ts
+├── middleware/{auth,rateLimit}.ts
+├── routes/adRoutes.ts
+└── services/{AdService,RewardService,VerificationService}.ts
+
+prisma/
+├── schema.prisma
+├── seed.ts
+└── migrations/20260822130000_add_rewarded_ads/migration.sql
 ```
+
+## Rewarded Ads Architecture Diagram (Text)
+
+```
+AdCard (UI) -> useAdRewards -> AdManager
+                            -> AdApiClient -> POST /api/ads/session
+                            -> AdProvider.showRewardedAd()
+                            -> POST /api/ads/reward
+Server AdController -> AdService -> VerificationService -> RewardService -> Prisma
+```
+
+## Provider Switching Guide
+
+1. Set `AD_PROVIDER=mock` for local/dev only.
+2. Set `AD_PROVIDER=telegram` for Telegram flow once server verification is officially supported.
+3. Keep `AD_ENABLED=true` and adjust reward/limit env vars.
+4. In production, `mock` provider is explicitly blocked by backend checks.
+
+## Server-side Verification Requirements
+
+- Client only sends `adSessionId`, `provider`, and verification token/transaction id.
+- Reward values are read from server `AdConfig`.
+- Server validates ownership, expiry, cooldown, daily limits, and idempotency before rewarding.
+- One `RewardTransaction` per `adSessionId` (`sourceId` unique).
+
+## Reward Calculation Logic
+
+- Rewards are stored as integer micro-units.
+- Default reward: `AD_REWARD_MICRO=1000` (= `0.001 CROWN`) and `AD_REWARD_XP=10`.
+- UI converts micro-units to display value; backend remains authoritative.
+
+## Rate Limiting Strategy
+
+- `POST /api/ads/session`: max 1 request / 5 seconds / user
+- `POST /api/ads/reward`: max 1 request / 30 seconds / user
 
 ## Tap Mechanics
 

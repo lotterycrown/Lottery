@@ -11,9 +11,10 @@ interface TapRewardProps {
   x: number;
   y: number;
   opacity: number;
+  text?: string;
 }
 
-export const TapReward: React.FC<TapRewardProps> = ({ x, y, opacity }) => {
+export const TapReward: React.FC<TapRewardProps> = ({ x, y, opacity, text }) => {
   return (
     <motion.div
       className="fixed pointer-events-none text-sm font-bold text-bronze-400"
@@ -31,7 +32,7 @@ export const TapReward: React.FC<TapRewardProps> = ({ x, y, opacity }) => {
         ease: 'easeOut',
       }}
     >
-      +{GAME_CONFIG.tapReward.toFixed(3)}
+      {text ?? `+${GAME_CONFIG.tapReward.toFixed(3)}`}
     </motion.div>
   );
 };
