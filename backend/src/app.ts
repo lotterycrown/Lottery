@@ -1,5 +1,6 @@
 import cors from 'cors';
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import { z } from 'zod';
 import { env } from './config';
@@ -45,6 +46,34 @@ export const createApp = () => {
 
   const auth = authMiddleware(env.TELEGRAM_BOT_TOKEN);
 
+  const authRouteLimiter = rateLimit({
+    windowMs: 60_000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  const readRouteLimiter = rateLimit({
+    windowMs: 60_000,
+    max: 240,
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  const tapRouteLimiter = rateLimit({
+    windowMs: 60_000,
+    max: 180,
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  const claimRouteLimiter = rateLimit({
+    windowMs: 60_000,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
   const tapIpLimiter = createSlidingWindowLimiter({
     limit: 180,
     windowMs: 60_000,
@@ -52,6 +81,33 @@ export const createApp = () => {
     keyGenerator: (req) => req.ip ?? null,
     code: 'RATE_LIMITED',
     message: 'Too many tap requests from this IP',
+  });
+
+  const authIpLimiter = createSlidingWindowLimiter({
+    limit: 30,
+    windowMs: 60_000,
+    keyPrefix: 'auth-ip',
+    keyGenerator: (req) => req.ip ?? null,
+    code: 'RATE_LIMITED',
+    message: 'Too many authentication attempts from this IP',
+  });
+
+  const readIpLimiter = createSlidingWindowLimiter({
+    limit: 240,
+    windowMs: 60_000,
+    keyPrefix: 'read-ip',
+    keyGenerator: (req) => req.ip ?? null,
+    code: 'RATE_LIMITED',
+    message: 'Too many requests from this IP',
+  });
+
+  const readUserLimiter = createSlidingWindowLimiter({
+    limit: 180,
+    windowMs: 60_000,
+    keyPrefix: 'read-user',
+    keyGenerator: (req) => req.auth?.userId ?? null,
+    code: 'RATE_LIMITED',
+    message: 'Too many requests for this user',
   });
 
   const tapUserLimiter = createSlidingWindowLimiter({
@@ -85,7 +141,7 @@ export const createApp = () => {
     ok(res, { status: 'ok' });
   });
 
-  app.post('/api/auth/telegram', async (req, res, next) => {
+  app.post('/api/auth/telegram', authRouteLimiter, authIpLimiter, async (req, res, next) => {
     try {
       const parsed = authSchema.parse(req.body);
       const telegramUser = validateTelegramOrDevInitData(
@@ -147,7 +203,7 @@ export const createApp = () => {
     }
   });
 
-  app.get('/api/me', auth, async (req, res, next) => {
+  app.get('/api/me', readRouteLimiter, readIpLimiter, auth, readUserLimiter, async (req, res, next) => {
     try {
       const user = await prisma.user.findUnique({ where: { id: req.auth!.userId } });
       if (!user) {
@@ -167,7 +223,7 @@ export const createApp = () => {
     }
   });
 
-  app.get('/api/game/state', auth, async (req, res, next) => {
+  app.get('/api/game/state', readRouteLimiter, readIpLimiter, auth, readUserLimiter, async (req, res, next) => {
     try {
       const state = await prisma.$transaction((tx) => getGameState(tx, req.auth!.userId));
       ok(res, state);
@@ -176,7 +232,7 @@ export const createApp = () => {
     }
   });
 
-  app.get('/api/game/config', auth, async (req, res, next) => {
+  app.get('/api/game/config', readRouteLimiter, readIpLimiter, auth, readUserLimiter, async (req, res, next) => {
     try {
       const state = await prisma.$transaction((tx) => getGameState(tx, req.auth!.userId));
       ok(res, state.config);
@@ -185,7 +241,7 @@ export const createApp = () => {
     }
   });
 
-  app.post('/api/game/tap', auth, tapIpLimiter, tapUserLimiter, async (req, res, next) => {
+  app.post('/api/game/tap', tapRouteLimiter, tapIpLimiter, auth, tapUserLimiter, async (req, res, next) => {
     try {
       const { requestId } = tapSchema.parse(req.body);
       const state = await handleTap(prisma, req.auth!.userId, requestId);
@@ -195,7 +251,7 @@ export const createApp = () => {
     }
   });
 
-  app.get('/api/tasks', auth, async (req, res, next) => {
+  app.get('/api/tasks', readRouteLimiter, readIpLimiter, auth, readUserLimiter, async (req, res, next) => {
     try {
       const state = await prisma.$transaction((tx) => getGameState(tx, req.auth!.userId));
       ok(res, state.tasks);
@@ -204,7 +260,7 @@ export const createApp = () => {
     }
   });
 
-  app.post('/api/tasks/:taskId/claim', auth, claimIpLimiter, claimUserLimiter, async (req, res, next) => {
+  app.post('/api/tasks/:taskId/claim', claimRouteLimiter, claimIpLimiter, auth, claimUserLimiter, async (req, res, next) => {
     try {
       const { taskId } = claimSchema.parse({ taskId: req.params.taskId });
       const state = await claimTaskReward(prisma, req.auth!.userId, taskId);
