@@ -107,6 +107,7 @@ router.post('/view', authenticate, validateBody(AdViewSchema), async (req: AuthR
         error: error.message,
         timestamp: Date.now(),
       });
+      return;
     }
     res.status(500).json({
       success: false,

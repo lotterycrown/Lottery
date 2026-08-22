@@ -57,6 +57,7 @@ router.post(
         code: 'RATE_LIMIT',
         timestamp: Date.now(),
       });
+      return;
     }
 
     // Record tap

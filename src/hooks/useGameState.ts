@@ -22,9 +22,7 @@ export const useGameState = () => {
     crownTier,
   }), [balance, xp, level, crownTier, totalTaps]);
 
-  const handleTap = () => {
-    void tap();
-  };
+  const handleTap = () => tap();
 
   return {
     playerState,

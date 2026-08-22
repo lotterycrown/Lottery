@@ -38,6 +38,16 @@ export interface TapResponse {
   leveledUp: boolean;
 }
 
+export interface TaskClaimResponse {
+  transactionId: string;
+  reward: string;
+  xp: number;
+  newBalance: string;
+  newLevel?: number;
+  leveledUp?: boolean;
+  duplicate?: boolean;
+}
+
 export interface TransactionHistoryItem {
   id: string;
   type: string;
@@ -72,6 +82,7 @@ export interface ReferralRecord {
   status: string;
   qualifiedAt?: string;
   rewardClaimedAt?: string;
+  createdAt?: string;
 }
 
 export interface ReferralStats {
@@ -224,7 +235,7 @@ export interface GameStoreState {
   loading: boolean;
   error: string | null;
   pendingReward: boolean;
-  tap: () => Promise<void>;
+  tap: () => Promise<boolean>;
   syncBalance: (balance: string, xp: string, level: number, crownTier: string, totalTaps: string) => void;
   clearError: () => void;
 }

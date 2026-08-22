@@ -11,6 +11,7 @@ import {
   ReferralInfo,
   TapResponse,
   Task,
+  TaskClaimResponse,
   TransactionHistoryItem,
   User,
 } from '../types';
@@ -122,7 +123,7 @@ export const taskApi = {
   getTasks: () => fetchApi<Task[]>('/tasks'),
 
   claimTask: (taskId: string, idempotencyKey: string) =>
-    fetchApi<TapResponse>(`/tasks/${taskId}/claim`, {
+    fetchApi<TaskClaimResponse>(`/tasks/${taskId}/claim`, {
       method: 'POST',
       body: JSON.stringify({ idempotencyKey }),
     }),
@@ -133,6 +134,12 @@ export const referralApi = {
 
   acceptReferral: (code: string) =>
     fetchApi<ReferralAcceptResponse>(`/referrals/${code}/accept`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    }),
+
+  checkQualification: () =>
+    fetchApi<{ referrals: ReferralInfo['referrals'] }>('/referrals/check-qualification', {
       method: 'POST',
       body: JSON.stringify({}),
     }),

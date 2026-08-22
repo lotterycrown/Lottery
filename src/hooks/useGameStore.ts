@@ -21,7 +21,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
 
       if (!response.success || !response.data) {
         set({ pendingReward: false, error: response.error || 'Tap failed' });
-        return;
+        return false;
       }
       const tapData = response.data;
 
@@ -37,7 +37,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
           pendingReward: false,
           error: null,
         });
-        return;
+        return true;
       }
 
       set((state) => ({
@@ -47,13 +47,15 @@ export const useGameStore = create<GameStoreState>((set) => ({
         crownTier: state.crownTier,
         totalTaps: state.totalTaps,
         pendingReward: false,
-        error: meResponse.error || null,
+        error: meResponse.error || 'Tap succeeded but failed to refresh profile',
       }));
+      return true;
     } catch (error) {
       set({
         pendingReward: false,
         error: error instanceof Error ? error.message : 'Tap failed',
       });
+      return false;
     }
   },
 

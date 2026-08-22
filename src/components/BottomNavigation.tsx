@@ -3,24 +3,30 @@
  * Displays navigation links (Crown, Tasks, Profile).
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 
 type NavItem = 'crown' | 'tasks' | 'profile';
 
 interface BottomNavigationProps {
   activeTab?: NavItem;
+  onChange?: (tab: NavItem) => void;
 }
 
 export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   activeTab = 'crown',
+  onChange,
 }) => {
   const [active, setActive] = useState<NavItem>(activeTab);
 
+  useEffect(() => {
+    setActive(activeTab);
+  }, [activeTab]);
+
   const navItems: { id: NavItem; label: string; enabled: boolean }[] = [
     { id: 'crown', label: 'Crown', enabled: true },
-    { id: 'tasks', label: 'Tasks', enabled: false },
-    { id: 'profile', label: 'Profile', enabled: false },
+    { id: 'tasks', label: 'Tasks', enabled: true },
+    { id: 'profile', label: 'Profile', enabled: true },
   ];
 
   return (
@@ -35,7 +41,10 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
           <motion.button
             key={item.id}
             onClick={() => {
-              if (item.enabled) setActive(item.id);
+              if (item.enabled) {
+                setActive(item.id);
+                onChange?.(item.id);
+              }
             }}
             className={`flex-1 py-2 text-xs font-semibold tracking-wider transition-colors ${
               active === item.id
@@ -49,7 +58,6 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             disabled={!item.enabled}
           >
             {item.label}
-            {!item.enabled && <span className="text-xs ml-1">●</span>}
           </motion.button>
         ))}
       </div>

@@ -200,6 +200,7 @@ router.post(
         error: 'Task claim failed. Please try again.',
         timestamp: Date.now(),
       });
+      return;
     }
 
     // Process reward (server-authoritative — reward comes from task record, not client)
