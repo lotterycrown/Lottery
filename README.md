@@ -15,6 +15,13 @@ A premium dark tap game built for Telegram Mini Apps.
 - Accessibility support
 - TypeScript + React + Vite
 
+✨ **Referral / Invite Friends foundations:**
+- Referral code generation (`CROWN-XXXXXXXX`)
+- Referral domain models, statuses, and validation schemas
+- Referral services for code generation, registration, qualification, and rewards
+- Prisma schema + migration for `ReferralCode`, `Referral`, and `ReferralConfig`
+- `/referrals` player page with code, copy/share link, stats, and history list
+
 ## Getting Started
 
 ### Prerequisites
@@ -121,6 +128,32 @@ export const GAME_CONFIG = {
 };
 ```
 
+### Referral code format
+
+- Format: `CROWN-XXXXXXXX`
+- Telegram `startapp` parameter format: `startapp=ref_CROWN-XXXXXXXX`
+
+### Referral qualification defaults
+
+Default requirements are defined in `src/referrals/config.ts`:
+- Minimum taps: `50`
+- Minimum level: `2`
+- First task completion required: `true`
+
+Default rewards:
+- Referrer: `50000` micro + `100` XP
+- Referred player: `10000` micro + `50` XP
+
+### Environment variables
+
+Copy `.env.example` and set:
+
+```bash
+VITE_BOT_USERNAME=your_bot_username
+VITE_MINI_APP_NAME=your_app_name
+DATABASE_URL=...
+```
+
 ## Telegram Integration
 
 The game works:
@@ -143,16 +176,24 @@ Player state stored in `localStorage` with key: `crown_tap_game_player_state`
 - 🤸 Respects `prefers-reduced-motion`
 - 📝 ARIA labels
 
-## Next Steps
+## Referral implementation notes
 
-Future implementation:
-- Backend integration
-- Database persistence
-- Level system
-- Tasks system
-- Wallet & withdrawals
-- Admin panel
-- NFT rewards
+- `src/referrals/generateReferralCode.ts` provides retry-based unique generation.
+- `src/referrals/validation.ts` includes request/config validation schemas.
+- `src/referrals/services/*` implements business logic for:
+  - referral code management
+  - referral registration anti-fraud checks
+  - qualification checks
+  - atomic reward distribution contracts
+- `prisma/schema.prisma` and `prisma/migrations/*` contain DB definitions for referral entities.
+
+## Testing
+
+Run the existing project checks:
+
+```bash
+npm run build
+```
 
 ## License
 

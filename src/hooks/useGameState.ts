@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { PlayerProgress, createInitialPlayerState } from '../game/playerState';
-import { loadPlayerState, savePlayerState } from '../utils/storage';
+import { loadPlayerState, savePlayerState } from '../utils/storage.ts';
 import { GAME_CONFIG } from '../game/gameConfig';
 
 export const useGameState = () => {

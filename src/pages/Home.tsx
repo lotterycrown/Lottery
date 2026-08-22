@@ -9,10 +9,15 @@ import { Balance } from '../components/Balance';
 import { CoinParticles } from '../components/CoinParticles';
 import { TapReward } from '../components/TapReward';
 import { BottomNavigation } from '../components/BottomNavigation';
+import { NavItem } from '../components/BottomNavigation';
 import { useGameState } from '../hooks/useGameState';
 import { useTapEffect } from '../hooks/useTapEffect';
 
-export const Home: React.FC = () => {
+interface HomeProps {
+  onNavigate: (tab: NavItem) => void;
+}
+
+export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
   const { playerState, handleTap } = useGameState();
   const { tapEffect, triggerTap, updateParticles } = useTapEffect();
 
@@ -72,7 +77,7 @@ export const Home: React.FC = () => {
       </div>
 
       {/* Bottom navigation */}
-      <BottomNavigation activeTab="crown" />
+      <BottomNavigation activeTab="crown" onChange={onNavigate} />
     </div>
   );
 };
