@@ -6,6 +6,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { GAME_CONFIG } from '../game/gameConfig';
+import { fromMicroUnits } from '../utils/decimal';
 
 interface TapRewardProps {
   x: number;
@@ -31,7 +32,7 @@ export const TapReward: React.FC<TapRewardProps> = ({ x, y, opacity }) => {
         ease: 'easeOut',
       }}
     >
-      +{GAME_CONFIG.tapReward.toFixed(3)}
+      +{fromMicroUnits(GAME_CONFIG.tapRewardMicroUnits)}
     </motion.div>
   );
 };

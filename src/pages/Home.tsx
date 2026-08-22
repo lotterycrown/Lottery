@@ -56,7 +56,7 @@ export const Home: React.FC = () => {
       )}
 
       {/* Header */}
-      <Header level={playerState.level} balance={playerState.coins} />
+      <Header level={playerState.level} balanceMicroUnits={playerState.coinsMicroUnits} />
 
       {/* Main content */}
       <div className="flex-1 flex flex-col items-center justify-center gap-8 pb-24">
@@ -68,7 +68,7 @@ export const Home: React.FC = () => {
         />
 
         {/* Balance */}
-        <Balance coins={playerState.coins} />
+        <Balance coinsMicroUnits={playerState.coinsMicroUnits} />
       </div>
 
       {/* Bottom navigation */}

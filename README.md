@@ -9,7 +9,7 @@ A premium dark tap game built for Telegram Mini Apps.
 - Smooth tap mechanics with instant feedback
 - Coin particles burst effect
 - Floating reward text animation
-- Local storage persistence
+- Demo-only local cache persistence
 - Telegram Mini App ready
 - Mobile-first responsive design
 - Accessibility support
@@ -33,7 +33,7 @@ npm install
 npm run dev
 ```
 
-The game will open at `http://localhost:3000`
+The game will open at `http://localhost:5173`
 
 ### Production Build
 
@@ -87,8 +87,8 @@ src/
    - Crown scales down to 0.96, bounces back
    - Particles burst outward with gravity
    - Reward text (+0.001) floats up
-4. **State Update**: `useGameState` adds coins and tap count
-5. **Persistence**: `localStorage` saves after every tap
+4. **State Update**: `useGameState` adds integer micro-units and tap count
+5. **Persistence**: a validated local demo cache is saved after every tap
 
 ### Performance
 
@@ -104,7 +104,7 @@ src/
 - **Vite** - Build tool
 - **Tailwind CSS** - Styling
 - **Framer Motion** - Animations
-- **localStorage** - State persistence
+- **localStorage** - Demo cache only
 
 ## Configuration
 
@@ -112,7 +112,7 @@ Edit `src/game/gameConfig.ts` to customize:
 
 ```typescript
 export const GAME_CONFIG = {
-  tapReward: 0.001,          // Coins per tap
+  tapRewardMicroUnits: 1_000n, // 0.001 coins per tap
   maxParticles: 80,          // Particle limit
   particleLifetime: 1000,    // Duration (ms)
   particleGravity: 0.005,    // Physics
@@ -132,9 +132,13 @@ See `src/utils/telegram.ts` for the adapter.
 
 ## Storage
 
-Player state stored in `localStorage` with key: `crown_tap_game_player_state`
+Player state is cached in `localStorage` with key `crown_tap_game_player_state`.
 
-**Note**: This is temporary/demo data. Backend will replace this in future steps.
+The cache is intentionally treated as non-authoritative demo state. Production server-side auth, validation, rate limiting, rewards, and reconciliation endpoints are not present in this repository and must be implemented in a backend service before deployment.
+
+## Environment
+
+Create a local `.env` file from `.env.example` when you need environment-specific values for the frontend build.
 
 ## Accessibility
 

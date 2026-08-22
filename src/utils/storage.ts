@@ -6,6 +6,40 @@
 import { PlayerProgress, createInitialPlayerState } from '../game/playerState';
 
 const STORAGE_KEY = 'crown_tap_game_player_state';
+const STORAGE_VERSION = 1;
+
+interface SerializedPlayerState {
+  version: number;
+  level: number;
+  xp: number;
+  coinsMicroUnits: string;
+  totalTaps: number;
+  crownTier: string;
+}
+
+const isValidSerializedPlayerState = (
+  value: unknown
+): value is SerializedPlayerState => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+
+  return (
+    candidate.version === STORAGE_VERSION &&
+    Number.isInteger(candidate.level) &&
+    Number.isInteger(candidate.xp) &&
+    typeof candidate.coinsMicroUnits === 'string' &&
+    /^\d+$/.test(candidate.coinsMicroUnits) &&
+    Number.isInteger(candidate.totalTaps) &&
+    typeof candidate.crownTier === 'string' &&
+    /^[a-z0-9_]{1,32}$/i.test(candidate.crownTier) &&
+    (candidate.level as number) >= 1 &&
+    (candidate.xp as number) >= 0 &&
+    (candidate.totalTaps as number) >= 0
+  );
+};
 
 /**
  * Load player state from localStorage.
@@ -18,19 +52,17 @@ export const loadPlayerState = (): PlayerProgress => {
       return createInitialPlayerState();
     }
     const parsed = JSON.parse(stored);
-    // Validate structure
-    if (
-      typeof parsed.level === 'number' &&
-      typeof parsed.xp === 'number' &&
-      typeof parsed.coins === 'number' &&
-      typeof parsed.totalTaps === 'number' &&
-      typeof parsed.crownTier === 'string'
-    ) {
-      return parsed;
+    if (isValidSerializedPlayerState(parsed)) {
+      return createInitialPlayerState({
+        level: parsed.level,
+        xp: parsed.xp,
+        coinsMicroUnits: BigInt(parsed.coinsMicroUnits),
+        totalTaps: parsed.totalTaps,
+        crownTier: parsed.crownTier,
+      });
     }
     return createInitialPlayerState();
-  } catch (error) {
-    console.warn('Failed to load player state from localStorage:', error);
+  } catch {
     return createInitialPlayerState();
   }
 };
@@ -40,10 +72,17 @@ export const loadPlayerState = (): PlayerProgress => {
  */
 export const savePlayerState = (state: PlayerProgress): void => {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (error) {
-    console.error('Failed to save player state to localStorage:', error);
-  }
+    const serializedState: SerializedPlayerState = {
+      version: STORAGE_VERSION,
+      level: state.level,
+      xp: state.xp,
+      coinsMicroUnits: state.coinsMicroUnits.toString(),
+      totalTaps: state.totalTaps,
+      crownTier: state.crownTier,
+    };
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serializedState));
+  } catch {}
 };
 
 /**
@@ -52,8 +91,6 @@ export const savePlayerState = (state: PlayerProgress): void => {
 export const resetPlayerState = (): PlayerProgress => {
   try {
     localStorage.removeItem(STORAGE_KEY);
-  } catch (error) {
-    console.error('Failed to reset player state:', error);
-  }
+  } catch {}
   return createInitialPlayerState();
 };

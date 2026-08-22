@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { PlayerProgress, createInitialPlayerState } from '../game/playerState';
 import { loadPlayerState, savePlayerState } from '../utils/storage';
 import { GAME_CONFIG } from '../game/gameConfig';
+import { addMicroUnits } from '../utils/decimal';
 
 export const useGameState = () => {
   const [playerState, setPlayerState] = useState<PlayerProgress | null>(null);
@@ -24,12 +25,12 @@ export const useGameState = () => {
     }
   }, [playerState]);
 
-  const addCoins = useCallback((amount: number) => {
+  const addCoins = useCallback((amount: bigint) => {
     setPlayerState((prev) => {
       if (!prev) return prev;
       return {
         ...prev,
-        coins: Math.round((prev.coins + amount) * 100000) / 100000, // Avoid floating point errors
+        coinsMicroUnits: addMicroUnits(prev.coinsMicroUnits, amount),
       };
     });
   }, []);
@@ -45,7 +46,7 @@ export const useGameState = () => {
   }, []);
 
   const handleTap = useCallback(() => {
-    addCoins(GAME_CONFIG.tapReward);
+    addCoins(GAME_CONFIG.tapRewardMicroUnits);
     incrementTaps();
   }, [addCoins, incrementTaps]);
 

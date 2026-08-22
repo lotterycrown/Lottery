@@ -4,13 +4,14 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
+import { fromMicroUnits } from '../utils/decimal';
 
 interface HeaderProps {
   level: number;
-  balance: number;
+  balanceMicroUnits: bigint;
 }
 
-export const Header: React.FC<HeaderProps> = ({ level, balance }) => {
+export const Header: React.FC<HeaderProps> = ({ level, balanceMicroUnits }) => {
   return (
     <header className="w-full px-4 pt-4 pb-2 flex justify-between items-start">
       {/* Title */}
@@ -34,7 +35,7 @@ export const Header: React.FC<HeaderProps> = ({ level, balance }) => {
           LEVEL {level}
         </div>
         <div className="text-sm text-white font-semibold">
-          {balance.toFixed(3)} coins
+          {fromMicroUnits(balanceMicroUnits)} coins
         </div>
       </motion.div>
     </header>
