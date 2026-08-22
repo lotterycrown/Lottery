@@ -14,7 +14,7 @@
     "noFallthroughCasesInSwitch": true,
     "resolveJsonModule": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "jsx": "react-jsx",
     "types": ["vite/client"],
     "allowImportingTsExtensions": true
