@@ -10,6 +10,10 @@ type SessionState = {
 };
 
 const MICRO_PER_COIN = 1_000_000;
+const makeId = (): string =>
+  typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `${Date.now()}`;
 
 const envNumber = (name: string, fallback: number): number => {
   const value = Number(import.meta.env[name]);
@@ -118,7 +122,7 @@ export class AdApiClient {
         throw new Error('Ad cooldown is active');
       }
 
-      const adSessionId = `local_ad_session_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const adSessionId = `local_ad_session_${makeId()}`;
       const expiresAt = Date.now() + 10 * 60 * 1000;
 
       localSessions.set(adSessionId, {
@@ -161,7 +165,7 @@ export class AdApiClient {
       if (session.expiresAt < Date.now()) throw new Error('Ad session expired');
       if (session.provider !== payload.provider) throw new Error('Provider mismatch');
 
-      const transactionId = payload.transactionId || `local_txn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const transactionId = payload.transactionId || `local_txn_${makeId()}`;
       if (rewardedTransactions.has(transactionId)) throw new Error('Duplicate ad transaction');
 
       if (localConfig.provider === 'mock' && import.meta.env.MODE === 'production') {

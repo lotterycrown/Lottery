@@ -1,6 +1,10 @@
 import { AdProvider, AdStatus, RewardedAdResult } from '../types';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const makeId = (): string =>
+  typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `${Date.now()}`;
 
 export class MockAdProvider implements AdProvider {
   private status: AdStatus = {
@@ -38,7 +42,7 @@ export class MockAdProvider implements AdProvider {
       status: 'completed',
       provider: 'mock',
       placementId,
-      transactionId: `mock_txn_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      transactionId: `mock_txn_${makeId()}`,
     };
   }
 
