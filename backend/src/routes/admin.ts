@@ -21,18 +21,19 @@ type UpdateConfigRequest = z.infer<typeof UpdateConfigSchema>;
  * GET /admin/config
  * Get current game configuration
  */
-router.get('/config', authenticate, requireAdmin, async (req: AuthRequest, res: Response) => {
+router.get('/config', authenticate, requireAdmin, async (_req: AuthRequest, res: Response): Promise<void> => {
   try {
     const config = await prisma.gameConfig.findUnique({
       where: { id: 'default' },
     });
 
     if (!config) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'Config not found',
         timestamp: Date.now(),
       });
+      return;
     }
 
     res.json({
@@ -59,7 +60,7 @@ router.patch(
   authenticate,
   requireAdmin,
   validateBody(UpdateConfigSchema),
-  async (req: AuthRequest, res: Response) => {
+  async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const { key, value, reason } = req.body as UpdateConfigRequest;
       const adminId = req.user!.id;
@@ -137,7 +138,7 @@ router.patch(
     } catch (error) {
       logger.error('Update config error:', error);
       if (error instanceof ValidationError) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: error.message,
           timestamp: Date.now(),
@@ -156,7 +157,7 @@ router.patch(
  * GET /admin/audit-logs
  * Get audit logs
  */
-router.get('/audit-logs', authenticate, requireAdmin, async (req: AuthRequest, res: Response) => {
+router.get('/audit-logs', authenticate, requireAdmin, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
     const offset = parseInt(req.query.offset as string) || 0;
@@ -193,7 +194,7 @@ router.get('/audit-logs', authenticate, requireAdmin, async (req: AuthRequest, r
  * GET /admin/users
  * List users (paginated)
  */
-router.get('/users', authenticate, requireAdmin, async (req: AuthRequest, res: Response) => {
+router.get('/users', authenticate, requireAdmin, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
     const offset = parseInt(req.query.offset as string) || 0;
@@ -248,7 +249,7 @@ router.get('/users', authenticate, requireAdmin, async (req: AuthRequest, res: R
  * POST /admin/analytics
  * Get analytics for date range
  */
-router.get('/analytics', authenticate, requireAdmin, async (req: AuthRequest, res: Response) => {
+router.get('/analytics', authenticate, requireAdmin, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const startDate = req.query.startDate ? new Date(req.query.startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const endDate = req.query.endDate ? new Date(req.query.endDate as string) : new Date();

@@ -45,7 +45,7 @@ export class ConflictError extends ApiError {
 }
 
 export class RateLimitError extends ApiError {
-  constructor(retryAfter?: number) {
+  constructor(_retryAfter?: number) {
     super(429, 'Too many requests', 'RATE_LIMIT');
     this.name = 'RateLimitError';
   }

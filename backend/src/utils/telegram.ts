@@ -1,7 +1,6 @@
 import crypto from 'crypto';
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
-const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || '';
 
 interface TelegramWebAppData {
   user?: {
@@ -12,6 +11,7 @@ interface TelegramWebAppData {
     username?: string;
     language_code?: string;
   };
+  start_param?: string; // startapp referral parameter
   auth_date: number;
   hash: string;
 }
@@ -65,6 +65,7 @@ export const verifyTelegramWebAppData = (initData: string): TelegramWebAppData |
     
     return {
       user,
+      start_param: params.get('start_param') || undefined,
       auth_date: authDate,
       hash,
     };
@@ -88,4 +89,12 @@ export const getTelegramUserIdFromInitData = (initData: string): bigint | null =
 export const getTelegramUserFromInitData = (initData: string) => {
   const data = verifyTelegramWebAppData(initData);
   return data?.user || null;
+};
+
+/**
+ * Extract startapp parameter (referral code) from init data
+ */
+export const getStartParamFromInitData = (initData: string): string | null => {
+  const data = verifyTelegramWebAppData(initData);
+  return data?.start_param || null;
 };

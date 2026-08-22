@@ -24,7 +24,7 @@ type TaskClaimRequest = z.infer<typeof TaskClaimSchema>;
 router.get(
   '/',
   authenticate,
-  asyncHandler(async (req: AuthRequest, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     const userId = req.user!.id;
 
     const tasks = await prisma.task.findMany({
@@ -74,120 +74,150 @@ router.get(
 
 /**
  * POST /tasks/:taskId/claim
- * Claim reward for completed task
+ * Claim reward for completed task (idempotent, concurrent-safe)
  */
 router.post(
   '/:taskId/claim',
   authenticate,
   validateBody(TaskClaimSchema),
-  asyncHandler(async (req: AuthRequest, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     const { taskId } = req.params;
     const { idempotencyKey } = req.body as TaskClaimRequest;
     const userId = req.user!.id;
 
-    // Get task
-    const task = await prisma.task.findUnique({
-      where: { id: taskId },
-    });
-
-    if (!task) {
-      return res.status(404).json({
-        success: false,
-        error: 'Task not found',
-        timestamp: Date.now(),
-      });
-    }
-
-    if (!task.isActive) {
-      return res.status(400).json({
-        success: false,
-        error: 'Task is not available',
-        timestamp: Date.now(),
-      });
-    }
-
-    // Get task progress
-    const progress = await prisma.taskProgress.findUnique({
-      where: {
-        userId_taskId: { userId, taskId },
-      },
-    });
-
-    if (!progress) {
-      return res.status(400).json({
-        success: false,
-        error: 'Task progress not found',
-        timestamp: Date.now(),
-      });
-    }
-
-    if (progress.claimed) {
-      return res.status(400).json({
-        success: false,
-        error: 'Task already claimed',
-        timestamp: Date.now(),
-      });
-    }
-
-    if (!progress.completed) {
-      return res.status(400).json({
-        success: false,
-        error: 'Task not completed',
-        timestamp: Date.now(),
-      });
-    }
-
-    // Check cooldown if applicable
-    if (task.claimCooldownHours > 0 && progress.claimedAt) {
-      const cooldownMs = task.claimCooldownHours * 60 * 60 * 1000;
-      const timeSinceClaim = Date.now() - progress.claimedAt.getTime();
-      if (timeSinceClaim < cooldownMs) {
-        return res.status(400).json({
-          success: false,
-          error: 'Task claim cooldown not met',
-          timestamp: Date.now(),
-        });
-      }
-    }
-
-    // Check for duplicate claim (idempotency)
-    const existingClaim = await prisma.transaction.findUnique({
+    // Check for duplicate transaction first (idempotency: same key, return cached result)
+    const existingTx = await prisma.transaction.findUnique({
       where: { idempotencyKey },
     });
 
-    if (existingClaim) {
-      return res.json({
+    if (existingTx) {
+      const task = await prisma.task.findUnique({ where: { id: taskId } });
+      res.json({
         success: true,
         data: {
-          transactionId: existingClaim.id,
-          reward: existingClaim.amount.toString(),
-          xp: task.xpReward,
-          newBalance: existingClaim.balanceAfter.toString(),
+          transactionId: existingTx.id,
+          reward: existingTx.amount.toString(),
+          xp: task?.xpReward ?? 0,
+          newBalance: existingTx.balanceAfter.toString(),
           duplicate: true,
         },
         timestamp: Date.now(),
       });
     }
 
-    // Process reward
-    const reward = await processReward(
-      userId,
-      task.reward,
-      task.xpReward,
-      CONSTANTS.TRANSACTION_TYPES.TASK_CLAIM,
-      idempotencyKey,
-      { taskId }
-    );
+    // Get task
+    const task = await prisma.task.findUnique({ where: { id: taskId } });
 
-    // Mark task as claimed
-    await prisma.taskProgress.update({
-      where: { userId_taskId: { userId, taskId } },
-      data: {
-        claimed: true,
-        claimedAt: new Date(),
-        claimIdempotencyKey: idempotencyKey,
-      },
-    });
+    if (!task) {
+      res.status(404).json({
+        success: false,
+        error: 'Task not found',
+        timestamp: Date.now(),
+      });
+      return;
+    }
+
+    if (!task.isActive) {
+      res.status(400).json({
+        success: false,
+        error: 'Task is not available',
+        timestamp: Date.now(),
+      });
+      return;
+    }
+
+    // Atomically mark task as claimed using claimIdempotencyKey unique constraint.
+    // updateMany with conditions on claimed=false + completed=true ensures:
+    //   - Task must be completed to claim
+    //   - Task must not already be claimed
+    //   - Only one concurrent request can set claimIdempotencyKey (unique constraint enforces this)
+    let claimResult: { count: number };
+    try {
+      claimResult = await prisma.taskProgress.updateMany({
+        where: {
+          userId,
+          taskId,
+          completed: true,
+          claimed: false,
+          claimIdempotencyKey: null, // Ensures no prior claim attempt racing
+        },
+        data: {
+          claimed: true,
+          claimedAt: new Date(),
+          claimIdempotencyKey: idempotencyKey,
+        },
+      });
+    } catch (error: any) {
+      // Unique constraint violation on claimIdempotencyKey: another concurrent request claimed it
+      if (error?.code === 'P2002') {
+        res.status(409).json({
+          success: false,
+          error: 'Task claim already in progress',
+          timestamp: Date.now(),
+        });
+      }
+      throw error;
+    }
+
+    if (claimResult.count === 0) {
+      // No rows updated — check what state the task is in
+      const progress = await prisma.taskProgress.findUnique({
+        where: { userId_taskId: { userId, taskId } },
+      });
+
+      if (!progress) {
+        res.status(400).json({
+          success: false,
+          error: 'Task progress not found. Complete the task first.',
+          timestamp: Date.now(),
+        });
+        return;
+      }
+
+      if (progress.claimed) {
+        res.status(400).json({
+          success: false,
+          error: 'Task already claimed',
+          timestamp: Date.now(),
+        });
+      }
+
+      if (!progress.completed) {
+        res.status(400).json({
+          success: false,
+          error: 'Task not completed yet',
+          timestamp: Date.now(),
+        });
+        return;
+      }
+
+      // Should not reach here
+      res.status(409).json({
+        success: false,
+        error: 'Task claim failed. Please try again.',
+        timestamp: Date.now(),
+      });
+    }
+
+    // Process reward (server-authoritative — reward comes from task record, not client)
+    let reward;
+    try {
+      reward = await processReward(
+        userId,
+        task.reward,
+        task.xpReward,
+        CONSTANTS.TRANSACTION_TYPES.TASK_CLAIM,
+        idempotencyKey,
+        { taskId }
+      );
+    } catch (rewardError) {
+      // Roll back the claim mark so the user can retry
+      await prisma.taskProgress.updateMany({
+        where: { userId, taskId, claimIdempotencyKey: idempotencyKey },
+        data: { claimed: false, claimedAt: null, claimIdempotencyKey: null },
+      });
+      throw rewardError;
+    }
 
     logger.info(`Task claimed by user ${userId}: ${taskId}`);
 

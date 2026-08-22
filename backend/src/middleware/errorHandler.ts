@@ -4,10 +4,10 @@ import { logger } from '../utils/logger';
 
 export const errorHandler = (
   err: Error | ApiError,
-  req: Request,
+  _req: Request,
   res: Response,
-  next: NextFunction
-) => {
+  _next: NextFunction
+): void => {
   logger.error('Error handler:', {
     name: err.name,
     message: err.message,
@@ -15,15 +15,15 @@ export const errorHandler = (
   });
 
   if (err instanceof ApiError) {
-    return res.status(err.statusCode).json({
+    res.status(err.statusCode).json({
       success: false,
       error: err.message,
       code: err.code,
       timestamp: Date.now(),
     });
+    return;
   }
 
-  // Unhandled error
   res.status(500).json({
     success: false,
     error: 'Internal server error',
@@ -33,6 +33,7 @@ export const errorHandler = (
 
 // Async error wrapper
 export const asyncHandler =
-  (fn: Function) => (req: Request, res: Response, next: NextFunction) => {
+  (fn: (req: Request, res: Response, next: NextFunction) => Promise<void>) =>
+  (req: Request, res: Response, next: NextFunction): void => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };

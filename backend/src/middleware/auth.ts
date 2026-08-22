@@ -1,8 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../utils/jwt';
 import { prisma } from '../db';
-import { AuthenticationError, AuthorizationError } from '../utils/errors';
-import { AuthRequest, AuthenticatedUser } from '../types';
+import { AuthRequest } from '../types';
 import { logger } from '../utils/logger';
 
 /**
@@ -21,26 +20,28 @@ export const authenticate = async (
   req: AuthRequest,
   res: Response,
   next: NextFunction
-) => {
+): Promise<void> => {
   try {
     const token = extractToken(req);
     if (!token) {
-      return res.status(401).json({
+      res.status(401).json({
         success: false,
         error: 'Missing or invalid authorization header',
         code: 'AUTHENTICATION_ERROR',
         timestamp: Date.now(),
       });
+      return;
     }
 
     const payload = verifyToken(token);
     if (!payload) {
-      return res.status(401).json({
+      res.status(401).json({
         success: false,
         error: 'Invalid or expired token',
         code: 'AUTHENTICATION_ERROR',
         timestamp: Date.now(),
       });
+      return;
     }
 
     // Load user from database
@@ -49,15 +50,16 @@ export const authenticate = async (
     });
 
     if (!user) {
-      return res.status(401).json({
+      res.status(401).json({
         success: false,
         error: 'User not found',
         code: 'AUTHENTICATION_ERROR',
         timestamp: Date.now(),
       });
+      return;
     }
 
-    // Attach user to request
+    // Attach user to request — role comes from DB, never from client
     req.user = {
       id: user.id,
       telegramId: user.telegramId,
@@ -68,7 +70,7 @@ export const authenticate = async (
       crownTier: user.crownTier,
     };
 
-    req.clientIp = req.ip || req.connection.remoteAddress || 'unknown';
+    req.clientIp = req.ip ?? req.socket?.remoteAddress ?? 'unknown';
 
     next();
   } catch (error) {
@@ -84,22 +86,24 @@ export const authenticate = async (
 /**
  * Require admin role
  */
-export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
+export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction): void => {
   if (!req.user) {
-    return res.status(401).json({
+    res.status(401).json({
       success: false,
       error: 'Unauthorized',
       timestamp: Date.now(),
     });
+    return;
   }
 
   if (req.user.role !== 'admin') {
-    return res.status(403).json({
+    res.status(403).json({
       success: false,
       error: 'Admin access required',
       code: 'AUTHORIZATION_ERROR',
       timestamp: Date.now(),
     });
+    return;
   }
 
   next();
@@ -110,18 +114,20 @@ export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction
  */
 export const optionalAuth = async (
   req: AuthRequest,
-  res: Response,
+  _res: Response,
   next: NextFunction
-) => {
+): Promise<void> => {
   try {
     const token = extractToken(req);
     if (!token) {
-      return next();
+      next();
+      return;
     }
 
     const payload = verifyToken(token);
     if (!payload) {
-      return next();
+      next();
+      return;
     }
 
     const user = await prisma.user.findUnique({
@@ -140,7 +146,7 @@ export const optionalAuth = async (
       };
     }
 
-    req.clientIp = req.ip || req.connection.remoteAddress || 'unknown';
+    req.clientIp = req.ip ?? req.socket?.remoteAddress ?? 'unknown';
     next();
   } catch (error) {
     logger.error('Optional auth error:', error);

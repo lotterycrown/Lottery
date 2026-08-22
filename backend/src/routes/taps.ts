@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { authenticate } from '../middleware/auth';
 import { validateBody } from '../middleware/validation';
 import { processReward, getUserTransactionHistory } from '../services/reward.service';
+import { updateGameplayTaskProgress, updateSpecialTaskProgress } from '../services/task.service';
 import { prisma } from '../db';
 import { logger } from '../utils/logger';
 import { AuthRequest } from '../types';
@@ -26,7 +27,7 @@ router.post(
   '/',
   authenticate,
   validateBody(TapRequestSchema),
-  asyncHandler(async (req: AuthRequest, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     const { idempotencyKey, clientTimestamp } = req.body as TapRequest;
     const userId = req.user!.id;
 
@@ -50,7 +51,7 @@ router.post(
     const maxTapsPerHour = config?.maxTapsPerHour || CONSTANTS.DEFAULT_MAX_TAPS_PER_HOUR;
     if (tapsThisHour >= maxTapsPerHour) {
       logger.warn(`User ${userId} exceeded tap rate limit`);
-      return res.status(429).json({
+      res.status(429).json({
         success: false,
         error: 'Rate limit exceeded',
         code: 'RATE_LIMIT',
@@ -88,10 +89,14 @@ router.post(
     );
 
     // Update total taps counter
-    await prisma.user.update({
+    const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: { totalTaps: { increment: 1 }, lastTapAt: new Date() },
     });
+
+    // Update server-side task progress (gameplay + level-based tasks)
+    await updateGameplayTaskProgress(userId, updatedUser.totalTaps);
+    await updateSpecialTaskProgress(userId, reward.newLevel);
 
     logger.info(`Tap recorded for user ${userId}`);
 
@@ -117,7 +122,7 @@ router.post(
 router.get(
   '/history',
   authenticate,
-  asyncHandler(async (req: AuthRequest, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     const userId = req.user!.id;
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
 
