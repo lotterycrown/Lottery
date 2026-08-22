@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import { z } from 'zod';
 import { authenticate } from '../middleware/auth';
 import { validateBody } from '../middleware/validation';
@@ -7,12 +7,12 @@ import { prisma } from '../db';
 import { logger } from '../utils/logger';
 import { AuthRequest } from '../types';
 import { CONSTANTS } from '../config/constants';
-import { NotFoundError, ValidationError } from '../utils/errors';
+import { asyncHandler } from '../middleware/errorHandler';
 
 const router = Router();
 
 const TaskClaimSchema = z.object({
-  idempotencyKey: z.string().min(1),
+  idempotencyKey: z.string().min(1, 'idempotencyKey is required'),
 });
 
 type TaskClaimRequest = z.infer<typeof TaskClaimSchema>;
@@ -21,8 +21,10 @@ type TaskClaimRequest = z.infer<typeof TaskClaimSchema>;
  * GET /tasks
  * List available tasks for current user
  */
-router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
-  try {
+router.get(
+  '/',
+  authenticate,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const userId = req.user!.id;
 
     const tasks = await prisma.task.findMany({
@@ -50,13 +52,15 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
         reward: task.reward.toString(),
         xpReward: task.xpReward,
         targetCount: task.targetCount,
-        progress: progress ? {
-          currentCount: progress.currentCount,
-          completed: progress.completed,
-          claimed: progress.claimed,
-          completedAt: progress.completedAt,
-          claimedAt: progress.claimedAt,
-        } : null,
+        progress: progress
+          ? {
+              currentCount: progress.currentCount,
+              completed: progress.completed,
+              claimed: progress.claimed,
+              completedAt: progress.completedAt,
+              claimedAt: progress.claimedAt,
+            }
+          : null,
       };
     });
 
@@ -65,22 +69,18 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
       data: tasksWithProgress,
       timestamp: Date.now(),
     });
-  } catch (error) {
-    logger.error('Get tasks error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to get tasks',
-      timestamp: Date.now(),
-    });
-  }
-});
+  })
+);
 
 /**
  * POST /tasks/:taskId/claim
  * Claim reward for completed task
  */
-router.post('/:taskId/claim', authenticate, validateBody(TaskClaimSchema), async (req: AuthRequest, res: Response) => {
-  try {
+router.post(
+  '/:taskId/claim',
+  authenticate,
+  validateBody(TaskClaimSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { taskId } = req.params;
     const { idempotencyKey } = req.body as TaskClaimRequest;
     const userId = req.user!.id;
@@ -91,11 +91,19 @@ router.post('/:taskId/claim', authenticate, validateBody(TaskClaimSchema), async
     });
 
     if (!task) {
-      throw new NotFoundError('Task');
+      return res.status(404).json({
+        success: false,
+        error: 'Task not found',
+        timestamp: Date.now(),
+      });
     }
 
     if (!task.isActive) {
-      throw new ValidationError('Task is not available');
+      return res.status(400).json({
+        success: false,
+        error: 'Task is not available',
+        timestamp: Date.now(),
+      });
     }
 
     // Get task progress
@@ -106,15 +114,27 @@ router.post('/:taskId/claim', authenticate, validateBody(TaskClaimSchema), async
     });
 
     if (!progress) {
-      throw new ValidationError('Task progress not found');
+      return res.status(400).json({
+        success: false,
+        error: 'Task progress not found',
+        timestamp: Date.now(),
+      });
     }
 
     if (progress.claimed) {
-      throw new ValidationError('Task already claimed');
+      return res.status(400).json({
+        success: false,
+        error: 'Task already claimed',
+        timestamp: Date.now(),
+      });
     }
 
     if (!progress.completed) {
-      throw new ValidationError('Task not completed');
+      return res.status(400).json({
+        success: false,
+        error: 'Task not completed',
+        timestamp: Date.now(),
+      });
     }
 
     // Check cooldown if applicable
@@ -122,7 +142,11 @@ router.post('/:taskId/claim', authenticate, validateBody(TaskClaimSchema), async
       const cooldownMs = task.claimCooldownHours * 60 * 60 * 1000;
       const timeSinceClaim = Date.now() - progress.claimedAt.getTime();
       if (timeSinceClaim < cooldownMs) {
-        throw new ValidationError('Task claim cooldown not met');
+        return res.status(400).json({
+          success: false,
+          error: 'Task claim cooldown not met',
+          timestamp: Date.now(),
+        });
       }
     }
 
@@ -179,21 +203,7 @@ router.post('/:taskId/claim', authenticate, validateBody(TaskClaimSchema), async
       },
       timestamp: Date.now(),
     });
-  } catch (error) {
-    logger.error('Claim task error:', error);
-    if (error instanceof NotFoundError || error instanceof ValidationError) {
-      return res.status(error.statusCode).json({
-        success: false,
-        error: error.message,
-        timestamp: Date.now(),
-      });
-    }
-    res.status(500).json({
-      success: false,
-      error: 'Failed to claim task',
-      timestamp: Date.now(),
-    });
-  }
-});
+  })
+);
 
 export default router;

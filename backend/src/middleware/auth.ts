@@ -25,12 +25,22 @@ export const authenticate = async (
   try {
     const token = extractToken(req);
     if (!token) {
-      throw new AuthenticationError('Missing or invalid authorization header');
+      return res.status(401).json({
+        success: false,
+        error: 'Missing or invalid authorization header',
+        code: 'AUTHENTICATION_ERROR',
+        timestamp: Date.now(),
+      });
     }
 
     const payload = verifyToken(token);
     if (!payload) {
-      throw new AuthenticationError('Invalid or expired token');
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid or expired token',
+        code: 'AUTHENTICATION_ERROR',
+        timestamp: Date.now(),
+      });
     }
 
     // Load user from database
@@ -39,7 +49,12 @@ export const authenticate = async (
     });
 
     if (!user) {
-      throw new AuthenticationError('User not found');
+      return res.status(401).json({
+        success: false,
+        error: 'User not found',
+        code: 'AUTHENTICATION_ERROR',
+        timestamp: Date.now(),
+      });
     }
 
     // Attach user to request
@@ -57,14 +72,6 @@ export const authenticate = async (
 
     next();
   } catch (error) {
-    if (error instanceof AuthenticationError) {
-      return res.status(error.statusCode).json({
-        success: false,
-        error: error.message,
-        code: error.code,
-        timestamp: Date.now(),
-      });
-    }
     logger.error('Authentication error:', error);
     res.status(500).json({
       success: false,
@@ -90,6 +97,7 @@ export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction
     return res.status(403).json({
       success: false,
       error: 'Admin access required',
+      code: 'AUTHORIZATION_ERROR',
       timestamp: Date.now(),
     });
   }

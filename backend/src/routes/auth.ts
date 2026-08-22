@@ -1,18 +1,18 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import { z } from 'zod';
 import { authenticate, optionalAuth } from '../middleware/auth';
 import { validateBody } from '../middleware/validation';
 import { findOrCreateUser, generateUserToken } from '../services/user.service';
 import { getTelegramUserFromInitData } from '../utils/telegram';
-import { AuthenticationError, ValidationError } from '../utils/errors';
 import { prisma } from '../db';
 import { logger } from '../utils/logger';
 import { AuthRequest } from '../types';
+import { asyncHandler } from '../middleware/errorHandler';
 
 const router = Router();
 
 const LoginRequestSchema = z.object({
-  initData: z.string().min(1),
+  initData: z.string().min(1, 'initData is required'),
 });
 
 type LoginRequest = z.infer<typeof LoginRequestSchema>;
@@ -21,14 +21,21 @@ type LoginRequest = z.infer<typeof LoginRequestSchema>;
  * POST /auth/login
  * Authenticate user via Telegram Mini App initData
  */
-router.post('/login', validateBody(LoginRequestSchema), async (req: Request, res: Response) => {
-  try {
+router.post(
+  '/login',
+  validateBody(LoginRequestSchema),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { initData } = req.body as LoginRequest;
 
     // Verify Telegram data
     const telegramUser = getTelegramUserFromInitData(initData);
     if (!telegramUser) {
-      throw new AuthenticationError('Invalid Telegram data');
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid Telegram data',
+        code: 'AUTHENTICATION_ERROR',
+        timestamp: Date.now(),
+      });
     }
 
     const telegramId = BigInt(telegramUser.id);
@@ -54,8 +61,8 @@ router.post('/login', validateBody(LoginRequestSchema), async (req: Request, res
         user: {
           id: user.id,
           telegramId: user.telegramId.toString(),
-          balance: user.balance,
-          xp: user.xp,
+          balance: user.balance.toString(),
+          xp: user.xp.toString(),
           level: user.level,
           crownTier: user.crownTier,
           referralCode: user.referralCode,
@@ -64,29 +71,17 @@ router.post('/login', validateBody(LoginRequestSchema), async (req: Request, res
       },
       timestamp: Date.now(),
     });
-  } catch (error) {
-    logger.error('Login error:', error);
-    if (error instanceof AuthenticationError) {
-      return res.status(error.statusCode).json({
-        success: false,
-        error: error.message,
-        timestamp: Date.now(),
-      });
-    }
-    res.status(500).json({
-      success: false,
-      error: 'Login failed',
-      timestamp: Date.now(),
-    });
-  }
-});
+  })
+);
 
 /**
  * GET /auth/me
  * Get current user info
  */
-router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
-  try {
+router.get(
+  '/me',
+  authenticate,
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const user = await prisma.user.findUnique({
       where: { id: req.user!.id },
     });
@@ -106,11 +101,11 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
         telegramId: user.telegramId.toString(),
         firstName: user.firstName,
         lastName: user.lastName,
-        balance: user.balance,
-        xp: user.xp,
+        balance: user.balance.toString(),
+        xp: user.xp.toString(),
         level: user.level,
         crownTier: user.crownTier,
-        totalTaps: user.totalTaps,
+        totalTaps: user.totalTaps.toString(),
         referralCode: user.referralCode,
         role: user.role,
         createdAt: user.createdAt,
@@ -118,14 +113,7 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
       },
       timestamp: Date.now(),
     });
-  } catch (error) {
-    logger.error('Get user error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to get user',
-      timestamp: Date.now(),
-    });
-  }
-});
+  })
+);
 
 export default router;

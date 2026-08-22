@@ -1,8 +1,6 @@
 import { prisma } from '../db';
 import { logger } from '../utils/logger';
 import { RewardResult } from '../types';
-import { generateIdempotencyKey } from '../utils/idempotency';
-import { v4 as uuidv4 } from 'uuid';
 import { updateUserProgression } from './user.service';
 
 /**
@@ -84,8 +82,9 @@ export const processReward = async (
     });
 
     // Update level and crown tier outside of transaction
+    const userBefore = await prisma.user.findUnique({ where: { id: userId } });
     const updatedUser = await updateUserProgression(userId);
-    const leveledUp = updatedUser.level > (await prisma.user.findUnique({ where: { id: userId } }))?.level!;
+    const leveledUp = updatedUser.level > (userBefore?.level || 1);
 
     logger.info(`Reward processed for user ${userId}: +${amount} balance, +${xp} XP`);
 

@@ -2,8 +2,17 @@ import { Request, Response, NextFunction } from 'express';
 import { ApiError } from '../utils/errors';
 import { logger } from '../utils/logger';
 
-export const errorHandler = (err: Error, req: Request, res: Response, next: NextFunction) => {
-  logger.error('Error:', err);
+export const errorHandler = (
+  err: Error | ApiError,
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  logger.error('Error handler:', {
+    name: err.name,
+    message: err.message,
+    stack: err.stack,
+  });
 
   if (err instanceof ApiError) {
     return res.status(err.statusCode).json({
@@ -21,3 +30,9 @@ export const errorHandler = (err: Error, req: Request, res: Response, next: Next
     timestamp: Date.now(),
   });
 };
+
+// Async error wrapper
+export const asyncHandler =
+  (fn: Function) => (req: Request, res: Response, next: NextFunction) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
