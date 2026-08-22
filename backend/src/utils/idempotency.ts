@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
-import { prisma } from '../db';
-import { logger } from './logger';
+import { prisma } from '../db/index.js';
+import { logger } from './logger.js';
 
 /**
  * Process idempotent transaction

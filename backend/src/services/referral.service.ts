@@ -1,8 +1,8 @@
-import { prisma } from '../db';
-import { logger } from '../utils/logger';
-import { processReward } from './reward.service';
-import { updateReferralTaskProgress } from './task.service';
-import { CONSTANTS } from '../config/constants';
+import { prisma } from '../db/index.js';
+import { logger } from '../utils/logger.js';
+import { processReward } from './reward.service.js';
+import { updateReferralTaskProgress } from './task.service.js';
+import { CONSTANTS } from '../config/constants.js';
 
 /**
  * Process referral qualification and reward for a single referral.

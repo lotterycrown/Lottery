@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifyToken } from '../utils/jwt';
-import { prisma } from '../db';
-import { AuthRequest } from '../types';
-import { logger } from '../utils/logger';
+import { verifyToken } from '../utils/jwt.js';
+import { prisma } from '../db/index.js';
+import { AuthRequest } from '../types/index.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Extract JWT from Authorization header

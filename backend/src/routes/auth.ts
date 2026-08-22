@@ -1,14 +1,14 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
-import { validateBody } from '../middleware/validation';
-import { findOrCreateUser, generateUserToken } from '../services/user.service';
-import { getTelegramUserFromInitData, getStartParamFromInitData } from '../utils/telegram';
-import { processReferralQualification } from '../services/referral.service';
-import { prisma } from '../db';
-import { logger } from '../utils/logger';
-import { AuthRequest } from '../types';
-import { asyncHandler } from '../middleware/errorHandler';
+import { authenticate } from '../middleware/auth.js';
+import { validateBody } from '../middleware/validation.js';
+import { findOrCreateUser, generateUserToken } from '../services/user.service.js';
+import { getTelegramUserFromInitData, getStartParamFromInitData } from '../utils/telegram.js';
+import { processReferralQualification } from '../services/referral.service.js';
+import { prisma } from '../db/index.js';
+import { logger } from '../utils/logger.js';
+import { AuthRequest } from '../types/index.js';
+import { asyncHandler } from '../middleware/errorHandler.js';
 
 const router = Router();
 

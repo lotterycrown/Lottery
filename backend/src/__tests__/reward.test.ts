@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { calculateLevel, calculateCrownTier } from '../services/user.service';
-import { CONSTANTS } from '../config/constants';
+import { calculateLevel, calculateCrownTier } from '../services/user.service.js';
+import { CONSTANTS } from '../config/constants.js';
 
 const DB_AVAILABLE = !!process.env.DATABASE_URL;
 
@@ -56,7 +56,7 @@ describe.skipIf(!DB_AVAILABLE)('Reward Service (requires PostgreSQL)', () => {
   let testUserId: string;
 
   beforeAll(async () => {
-    const { prisma } = await import('../db');
+    const { prisma } = await import('../db/index.js');
     const user = await prisma.user.create({
       data: {
         telegramId: BigInt(Math.floor(Math.random() * 1_000_000_000)),
@@ -70,13 +70,13 @@ describe.skipIf(!DB_AVAILABLE)('Reward Service (requires PostgreSQL)', () => {
   });
 
   afterAll(async () => {
-    const { prisma } = await import('../db');
+    const { prisma } = await import('../db/index.js');
     await prisma.transaction.deleteMany({ where: { userId: testUserId } });
     await prisma.user.delete({ where: { id: testUserId } });
   });
 
   it('should process tap reward', async () => {
-    const { processReward } = await import('../services/reward.service');
+    const { processReward } = await import('../services/reward.service.js');
     const idempotencyKey = `tap-${Date.now()}`;
     const result = await processReward(
       testUserId,
@@ -91,7 +91,7 @@ describe.skipIf(!DB_AVAILABLE)('Reward Service (requires PostgreSQL)', () => {
   });
 
   it('should prevent duplicate rewards via idempotency key', async () => {
-    const { processReward } = await import('../services/reward.service');
+    const { processReward } = await import('../services/reward.service.js');
     const idempotencyKey = `duplicate-${Date.now()}`;
 
     const result1 = await processReward(

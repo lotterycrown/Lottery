@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateToken, verifyToken } from '../utils/jwt';
+import { generateToken, verifyToken } from '../utils/jwt.js';
 
 describe('JWT Auth Middleware (unit)', () => {
   it('should generate a valid JWT token', () => {
@@ -59,7 +59,7 @@ describe('Self-referral protection (logic)', () => {
 
 describe('Idempotency key logic (unit)', () => {
   it('should generate unique idempotency keys', async () => {
-    const { generateIdempotencyKey } = await import('../utils/idempotency');
+    const { generateIdempotencyKey } = await import('../utils/idempotency.js');
     const key1 = generateIdempotencyKey();
     const key2 = generateIdempotencyKey();
     expect(key1).not.toBe(key2);

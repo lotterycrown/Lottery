@@ -1,13 +1,13 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
-import { validateBody } from '../middleware/validation';
-import { processReward } from '../services/reward.service';
-import { prisma } from '../db';
-import { logger } from '../utils/logger';
-import { AuthRequest } from '../types';
-import { CONSTANTS } from '../config/constants';
-import { asyncHandler } from '../middleware/errorHandler';
+import { authenticate } from '../middleware/auth.js';
+import { validateBody } from '../middleware/validation.js';
+import { processReward } from '../services/reward.service.js';
+import { prisma } from '../db/index.js';
+import { logger } from '../utils/logger.js';
+import { AuthRequest } from '../types/index.js';
+import { CONSTANTS } from '../config/constants.js';
+import { asyncHandler } from '../middleware/errorHandler.js';
 
 const router = Router();
 
