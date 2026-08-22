@@ -1,10 +1,10 @@
-# Crown Tap Game - Step 1
+# Crown Tap Game - Step 3
 
 A premium dark tap game built for Telegram Mini Apps.
 
 ## Features
 
-✨ **Step 1 Complete:**
+✨ **Step 3 Complete:**
 - Bronze crown with metallic 3D visuals
 - Smooth tap mechanics with instant feedback
 - Coin particles burst effect
@@ -14,6 +14,10 @@ A premium dark tap game built for Telegram Mini Apps.
 - Mobile-first responsive design
 - Accessibility support
 - TypeScript + React + Vite
+- Task system with unlocks, progress, and claiming
+- Tasks page with premium matte-black UI
+- Config-driven task/reward architecture
+- Micro-unit reward precision utilities
 
 ## Getting Started
 
@@ -61,16 +65,22 @@ src/
 ├── game/            # Game logic
 │   ├── gameConfig.ts        # Configuration
 │   ├── playerState.ts       # Data structures
-│   └── tapEngine.ts         # (Placeholder)
+│   └── taskConfig.ts        # Task/reward configuration
 ├── hooks/           # React hooks
 │   ├── useGameState.ts      # State management
 │   └── useTapEffect.ts      # Tap animations
 ├── utils/           # Utilities
-│   ├── storage.ts           # localStorage wrapper
+│   ├── storage.ts           # localStorage + migration
+│   ├── storageTypes.ts      # Persisted game state types
+│   ├── money.ts             # Micro-unit money helpers
 │   ├── telegram.ts          # Telegram adapter
 │   └── particle.ts          # Particle system
 ├── pages/           # Pages
-│   └── Home.tsx             # Main screen
+│   ├── Home.tsx             # Crown page
+│   ├── Tasks.tsx            # Tasks page
+│   └── Profile.tsx          # Placeholder
+├── services/
+│   └── repositories.ts      # Repository pattern + TaskManager
 ├── styles/          # Global styles
 │   └── globals.css          # Tailwind + custom
 ├── App.tsx          # Root component
@@ -88,7 +98,8 @@ src/
    - Particles burst outward with gravity
    - Reward text (+0.001) floats up
 4. **State Update**: `useGameState` adds coins and tap count
-5. **Persistence**: `localStorage` saves after every tap
+5. **Task Progress**: tap tasks and unlock counter update per valid tap
+6. **Persistence**: `localStorage` saves player/task state after updates
 
 ### Performance
 
@@ -143,16 +154,13 @@ Player state stored in `localStorage` with key: `crown_tap_game_player_state`
 - 🤸 Respects `prefers-reduced-motion`
 - 📝 ARIA labels
 
-## Next Steps
+## Task System Notes
 
-Future implementation:
-- Backend integration
-- Database persistence
-- Level system
-- Tasks system
-- Wallet & withdrawals
-- Admin panel
-- NFT rewards
+- Task statuses: `locked`, `available`, `in_progress`, `completed`, `claimed`
+- Unlock cadence is configurable with `TASK_CONFIG.tapsRequiredToUnlock`
+- Rewards are configuration-driven via `REWARD_CONFIG`
+- Claiming is explicit (no auto-reward) and double-claim protected
+- Storage migration preserves old Step 1/2 player saves
 
 ## License
 
