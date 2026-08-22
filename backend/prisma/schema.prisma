@@ -1,0 +1,361 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// USER & AUTHENTICATION
+// ============================================================================
+
+model User {
+  id                    String   @id @default(cuid())
+  telegramId            BigInt   @unique
+  telegramUsername      String?
+  firstName             String?
+  lastName              String?
+  
+  // Authentication
+  createdAt             DateTime @default(now())
+  lastLoginAt           DateTime?
+  
+  // Admin role
+  role                  String   @default("user") // "user", "admin"
+  
+  // Player state
+  balance               BigInt   @default(0) // Micro-units (1,000,000 = 1 coin)
+  xp                    BigInt   @default(0)
+  level                 Int      @default(1)
+  crownTier             String   @default("bronze_1") // bronze_1, bronze_2, ..., silver_1, ..., gold_1, etc.
+  totalTaps             BigInt   @default(0)
+  lastTapAt             DateTime?
+  
+  // Referral
+  referralCode          String   @unique @default(cuid())
+  referrerId            String?  @db.Citext
+  referrer              User?    @relation("ReferralsGiven", fields: [referrerId], references: [id], onDelete: SetNull)
+  referrals             User[]   @relation("ReferralsGiven")
+  referralQualifiedAt   DateTime?
+  referralRewardClaimedAt DateTime?
+  
+  // Relationships
+  transactions          Transaction[]
+  taskProgress          TaskProgress[]
+  ads                   AdView[]
+  sessions              Session[]
+  auditLogs             AuditLog[]
+  
+  @@index([telegramId])
+  @@index([referralCode])
+  @@index([referrerId])
+}
+
+model Session {
+  id            String   @id @default(cuid())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  token         String   @unique
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+  
+  @@index([userId])
+  @@index([token])
+}
+
+// ============================================================================
+// REWARDS & TRANSACTIONS (IMMUTABLE LEDGER)
+// ============================================================================
+
+model Transaction {
+  id                String   @id @default(cuid())
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            String
+  
+  // Transaction metadata
+  type              String   // "tap", "task_claim", "ad_view", "referral_reward", "admin_adjustment"
+  amount            BigInt   // Micro-units (can be negative for deductions)
+  balanceBefore     BigInt   // Balance before this transaction
+  balanceAfter      BigInt   // Balance after this transaction
+  
+  // Idempotency & replay protection
+  idempotencyKey    String   @unique // UUID to prevent duplicate processing
+  duplicateOf       String?  // If this is a duplicate, reference the original transaction ID
+  
+  // Reference to source
+  tapId             String?  @unique
+  taskClaimId       String?  @unique
+  adViewId          String?  @unique
+  referralId        String?
+  
+  // Metadata
+  metadata          Json?    // Additional data (e.g., task reward type, ad network)
+  createdAt         DateTime @default(now())
+  
+  @@index([userId])
+  @@index([idempotencyKey])
+  @@index([createdAt])
+}
+
+// ============================================================================
+// TAP SYSTEM
+// ============================================================================
+
+model Tap {
+  id                String   @id @default(cuid())
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            String
+  
+  // Reward
+  reward            BigInt   // Micro-units
+  xpReward          Int
+  
+  // Idempotency
+  idempotencyKey    String   @unique // Client-generated UUID
+  
+  // Verification
+  clientTimestamp   DateTime
+  serverTimestamp   DateTime @default(now())
+  ipAddress         String?
+  userAgent         String?
+  
+  // Rate limiting check
+  rateLimitCheckPassed Boolean @default(true)
+  
+  @@index([userId])
+  @@index([idempotencyKey])
+  @@index([serverTimestamp])
+}
+
+// ============================================================================
+// TASKS
+// ============================================================================
+
+model Task {
+  id                String   @id @default(cuid())
+  title             String
+  description       String?
+  type              String   // "social", "gameplay", "referral", "special"
+  requirement       String   // Description of what to do
+  
+  // Rewards (in micro-units)
+  reward            BigInt
+  xpReward          Int
+  
+  // Requirements
+  requiredLevel     Int      @default(1)
+  isActive          Boolean  @default(true)
+  
+  // Progression
+  targetCount       Int      @default(1) // e.g., "invite 3 friends" = targetCount: 3
+  
+  // Cooldown (in hours, 0 = no cooldown)
+  claimCooldownHours Int    @default(0)
+  
+  // Metadata
+  metadata          Json?    // Extra data for task logic
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Relationships
+  progress          TaskProgress[]
+  
+  @@index([isActive])
+}
+
+model TaskProgress {
+  id                String   @id @default(cuid())
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            String
+  task              Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId            String
+  
+  // Progress
+  currentCount      Int      @default(0)
+  completed         Boolean  @default(false)
+  completedAt       DateTime?
+  claimed           Boolean  @default(false)
+  claimedAt         DateTime?
+  
+  // Idempotency
+  claimIdempotencyKey String? @unique
+  
+  // Metadata
+  metadata          Json?    // Task-specific progress data
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@unique([userId, taskId])
+  @@index([userId])
+  @@index([taskId])
+  @@index([completed])
+}
+
+// ============================================================================
+// REWARDS / AD SYSTEM
+// ============================================================================
+
+model AdView {
+  id                String   @id @default(cuid())
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            String
+  
+  // Reward
+  reward            BigInt   // Micro-units
+  
+  // Provider verification
+  provider          String   // "admob", "applovin", "unity_ads", "none"
+  adNetworkId       String?
+  adUnitId          String?
+  
+  // Verification
+  verified          Boolean  @default(false)
+  verificationError String?  // Error message if verification failed
+  verificationTimestamp DateTime?
+  
+  // Client info
+  clientVerificationToken String? // Token from ad provider for verification
+  
+  // Metadata
+  metadata          Json?    // Ad network response data
+  watchedAt         DateTime @default(now())
+  
+  @@index([userId])
+  @@index([provider])
+  @@index([verified])
+}
+
+// ============================================================================
+// REFERRAL SYSTEM
+// ============================================================================
+
+model Referral {
+  id                String   @id @default(cuid())
+  referrer          User     @relation("ReferrerOf", fields: [referrerId], references: [id], onDelete: Cascade)
+  referrerId        String
+  referred          User?    @relation("ReferredBy", fields: [referredId], references: [id], onDelete: SetNull)
+  referredId        String?  @unique
+  
+  // Status
+  status            String   @default("pending") // "pending", "qualified", "rewarded"
+  qualifiedAt       DateTime?
+  rewardClaimedAt   DateTime?
+  
+  // Qualification criteria
+  qualificationThreshold BigInt @default(1000000) // Micro-units (1 coin)
+  qualificationMet  Boolean  @default(false)
+  
+  // Idempotency
+  claimIdempotencyKey String? @unique
+  
+  // Metadata
+  metadata          Json?    // Tracking data
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@unique([referrerId, referredId])
+  @@index([referrerId])
+  @@index([referredId])
+  @@index([status])
+}
+
+// ============================================================================
+// CONFIGURATION
+// ============================================================================
+
+model GameConfig {
+  id                String   @id @default("default")
+  
+  // Rewards (micro-units)
+  tapReward         BigInt   @default(1000)
+  taskRewardSmall   BigInt   @default(50000)
+  taskRewardMedium  BigInt   @default(100000)
+  taskRewardLarge   BigInt   @default(250000)
+  adReward          BigInt   @default(10000)
+  referralReward    BigInt   @default(500000)
+  referralBonusReward BigInt @default(1000000)
+  
+  // XP
+  xpPerTap          Int      @default(1)
+  xpPerTaskSmall    Int      @default(10)
+  xpPerTaskMedium   Int      @default(25)
+  xpPerTaskLarge    Int      @default(50)
+  xpPerAd           Int      @default(5)
+  
+  // Limits
+  maxTapsPerHour    Int      @default(3600)
+  tapCooldownMs     Int      @default(100)
+  taskClaimCooldownHours Int @default(24)
+  
+  // Progression thresholds (XP required for each level)
+  // JSON format: {"1": 0, "2": 100, "3": 300, ...}
+  levelThresholds   Json     @default("{}")
+  
+  // Crown tier progression
+  // JSON format: {"bronze_1": 0, "bronze_2": 5, "silver_1": 10, ...}
+  crownProgression  Json     @default("{}")
+  
+  // Metadata
+  updatedAt         DateTime @updatedAt
+  updatedBy         String?  // Admin ID who made the change
+}
+
+// ============================================================================
+// ADMIN & AUDIT
+// ============================================================================
+
+model AuditLog {
+  id                String   @id @default(cuid())
+  admin             User     @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  adminId           String?
+  
+  // Action
+  action            String   // "config_update", "user_adjustment", "admin_login", etc.
+  resourceType      String?  // "user", "config", "task", etc.
+  resourceId        String?  // ID of affected resource
+  
+  // Changes
+  previousValue     Json?
+  newValue          Json?
+  
+  // Metadata
+  ipAddress         String?
+  userAgent         String?
+  reason            String?  // Admin's reason for the action
+  createdAt         DateTime @default(now())
+  
+  @@index([adminId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// ============================================================================
+// ANALYTICS
+// ============================================================================
+
+model DailyAnalytics {
+  id                String   @id @default(cuid())
+  date              DateTime // Start of day
+  
+  // Users
+  newUsers          Int      @default(0)
+  activeUsers       Int      @default(0)
+  totalUsers        Int      @default(0)
+  
+  // Engagement
+  totalTaps         BigInt   @default(0)
+  totalTasksClaimed BigInt   @default(0)
+  totalAdsWatched   BigInt   @default(0)
+  totalReferrals    BigInt   @default(0)
+  
+  // Rewards
+  totalRewardsPaid  BigInt   @default(0) // Micro-units
+  averageBalance    BigInt   @default(0) // Micro-units
+  
+  // Metadata
+  updatedAt         DateTime @updatedAt
+  
+  @@unique([date])
+}
