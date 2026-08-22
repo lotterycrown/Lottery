@@ -7,7 +7,9 @@ import { useMemo } from 'react';
 import { PlayerProgress } from '../game/playerState';
 import { useGameStore } from './useGameStore';
 
-const bigintToNumber = (value: bigint): number => Number(value) / 1_000_000;
+// Backend balance/xp values are persisted in micro-units (1e6 precision).
+const MICRO_UNITS_PER_COIN = 1_000_000;
+const bigintToNumber = (value: bigint): number => Number(value) / MICRO_UNITS_PER_COIN;
 
 export const useGameState = () => {
   const { balance, xp, level, crownTier, totalTaps, tap } = useGameStore();

@@ -11,6 +11,10 @@ export const useTelegramAuth = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    initializeTelegram();
+  }, []);
+
+  useEffect(() => {
     const initTelegram = async () => {
       if (token || user) {
         setIsInitializing(false);
@@ -18,19 +22,13 @@ export const useTelegramAuth = () => {
       }
 
       try {
-        const webApp = initializeTelegram();
+        const webApp = getTelegramInitData();
         if (!webApp) {
           setIsInitializing(false);
           return;
         }
 
-        const initData = getTelegramInitData();
-        if (!initData) {
-          setError('Missing Telegram init data');
-          setIsInitializing(false);
-          return;
-        }
-
+        const initData = webApp;
         await login(initData);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Telegram authentication failed');
