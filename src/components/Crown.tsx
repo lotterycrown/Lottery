@@ -3,7 +3,7 @@
  * 3D-looking metallic crown with idle animations.
  */
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { GAME_CONFIG } from '../game/gameConfig';
 
@@ -39,6 +39,7 @@ export const Crown: React.FC<CrownProps> = ({
     <motion.div
       ref={crownRef}
       className="cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-bronze-400 rounded-full"
+      style={{ scale }}
       onPointerDown={handlePointerDown}
       role="button"
       tabIndex={0}
