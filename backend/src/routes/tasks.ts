@@ -103,6 +103,7 @@ router.post(
         },
         timestamp: Date.now(),
       });
+      return;
     }
 
     // Get task
@@ -155,6 +156,7 @@ router.post(
           error: 'Task claim already in progress',
           timestamp: Date.now(),
         });
+        return;
       }
       throw error;
     }
@@ -180,6 +182,7 @@ router.post(
           error: 'Task already claimed',
           timestamp: Date.now(),
         });
+        return;
       }
 
       if (!progress.completed) {

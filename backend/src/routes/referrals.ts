@@ -95,6 +95,7 @@ router.post(
         error: 'Cannot refer yourself',
         timestamp: Date.now(),
       });
+      return;
     }
 
     // Use a transaction to atomically check and create the referral relationship
@@ -139,6 +140,7 @@ router.post(
           error: 'You have already used a referral code',
           timestamp: Date.now(),
         });
+        return;
       }
       throw error;
     }
