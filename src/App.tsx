@@ -3,16 +3,11 @@ import { Home } from './pages/Home';
 import { useAuthStore } from './hooks/useAuthStore';
 import { useGameStore } from './hooks/useGameStore';
 import { useTelegramAuth } from './hooks/useTelegramAuth';
-import { initializeTelegram } from './utils/telegram';
 
 function App() {
   const { token, user, loading, error, loadUser } = useAuthStore();
   const syncBalance = useGameStore((state) => state.syncBalance);
   const { isInitializing, error: telegramError } = useTelegramAuth();
-
-  useEffect(() => {
-    initializeTelegram();
-  }, []);
 
   useEffect(() => {
     if (token && !user && !loading) {
