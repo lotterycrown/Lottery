@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TaskStatus {
+  locked
+  in_progress
+  completed
+  claimed
+}
+
+enum TaskType {
+  tap_count
+}
+
+enum RewardType {
+  tap
+  task_claim
+  migration
+}
+
+model User {
+  id           String         @id @default(cuid())
+  telegramId   String         @unique
+  username     String?
+  firstName    String?
+  lastName     String?
+  photoUrl     String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  lastActiveAt DateTime       @default(now())
+  progress     PlayerProgress?
+  userTasks    UserTask[]
+  rewards      RewardTransaction[]
+  tapRequests  TapRequest[]
+}
+
+model PlayerProgress {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coinsMicro Int      @default(0)
+  xp         Int      @default(0)
+  level      Int      @default(1)
+  crownTier  String   @default("bronze_1")
+  totalTaps  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model TaskDefinition {
+  id                String    @id @default(cuid())
+  title             String    @unique
+  description       String
+  type              TaskType
+  target            Int
+  rewardMicro       Int
+  rewardXp          Int      @default(0)
+  unlockAfterTaps   Int      @default(0)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  userTasks         UserTask[]
+}
+
+model UserTask {
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taskId      String
+  task        TaskDefinition @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  progress    Int          @default(0)
+  status      TaskStatus   @default(locked)
+  unlockedAt  DateTime?
+  completedAt DateTime?
+  claimedAt   DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([userId, taskId])
+  @@index([userId])
+}
+
+model RewardTransaction {
+  id         String     @id @default(cuid())
+  userId     String
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       RewardType
+  amountMicro Int
+  xpAmount   Int        @default(0)
+  source     String
+  sourceId   String
+  createdAt  DateTime   @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model TapRequest {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  requestId String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, requestId])
+  @@index([userId])
+}
+
+model GameConfig {
+  id                        Int      @id @default(1)
+  tapRewardMicro            Int      @default(1000)
+  xpPerTap                  Int      @default(1)
+  tapsRequiredToUnlockTask  Int      @default(25)
+  percentageRewardEnabled   Boolean  @default(false)
+  defaultPercentage         Int      @default(100)
+  updatedAt                 DateTime @updatedAt
+}

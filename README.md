@@ -1,159 +1,74 @@
-# Crown Tap Game - Step 1
+# Crown - Step 4 Full Stack
 
-A premium dark tap game built for Telegram Mini Apps.
+This repository now includes a production-oriented architecture for the Telegram Mini App game:
 
-## Features
+- **Frontend**: React + Vite + TypeScript
+- **Backend**: Node.js + TypeScript + Express
+- **Database**: PostgreSQL + Prisma
+- **Shared**: TypeScript game/progression/API types
 
-✨ **Step 1 Complete:**
-- Bronze crown with metallic 3D visuals
-- Smooth tap mechanics with instant feedback
-- Coin particles burst effect
-- Floating reward text animation
-- Local storage persistence
-- Telegram Mini App ready
-- Mobile-first responsive design
-- Accessibility support
-- TypeScript + React + Vite
+## Security Model
 
-## Getting Started
+- Backend is authoritative for rewards, XP, level, crown tier, balance, and task state.
+- Telegram `initData` is validated on the backend before issuing an auth token.
+- Tap idempotency enforced by `(userId, requestId)` uniqueness in `TapRequest`.
+- Reward ledger is immutable in `RewardTransaction`.
+- Coins are stored in integer micro-units (`coinsMicro`).
 
-### Prerequisites
-- Node.js 16+
-- npm or yarn
+## Environment
 
-### Installation
+Copy `.env.example` to `.env` and fill in values:
+
+- `DATABASE_URL`
+- `TELEGRAM_BOT_TOKEN`
+- `API_PORT`
+- `CLIENT_URL`
+- `NODE_ENV`
+
+## Commands
 
 ```bash
 npm install
-```
-
-### Development
-
-```bash
-npm run dev
-```
-
-The game will open at `http://localhost:3000`
-
-### Production Build
-
-```bash
+npm run db:generate
+npm run db:migrate
+npm run db:seed
+npm run dev         # frontend
+npm run dev:server  # backend
+npm run lint
+npm run test
 npm run build
 ```
 
-### Preview Production Build
+## Docker
 
 ```bash
-npm run preview
+docker-compose up
 ```
 
-## Project Structure
+## API Endpoints
 
-```
-src/
-├── components/       # React components
-│   ├── Crown.tsx            # 3D metallic crown
-│   ├── CoinParticles.tsx    # Particle effects
-│   ├── Header.tsx           # Top UI
-│   ├── Balance.tsx          # Coin display
-│   ├── TapReward.tsx        # Floating text
-│   └── BottomNavigation.tsx # Nav bar
-├── game/            # Game logic
-│   ├── gameConfig.ts        # Configuration
-│   ├── playerState.ts       # Data structures
-│   └── tapEngine.ts         # (Placeholder)
-├── hooks/           # React hooks
-│   ├── useGameState.ts      # State management
-│   └── useTapEffect.ts      # Tap animations
-├── utils/           # Utilities
-│   ├── storage.ts           # localStorage wrapper
-│   ├── telegram.ts          # Telegram adapter
-│   └── particle.ts          # Particle system
-├── pages/           # Pages
-│   └── Home.tsx             # Main screen
-├── styles/          # Global styles
-│   └── globals.css          # Tailwind + custom
-├── App.tsx          # Root component
-└── main.tsx         # Entry point
+- `POST /api/auth/telegram`
+- `GET /api/me`
+- `GET /api/health`
+- `GET /api/game/state`
+- `GET /api/game/config`
+- `POST /api/game/tap`
+- `GET /api/tasks`
+- `POST /api/tasks/:taskId/claim`
+
+All responses use:
+
+```json
+{ "success": true, "data": {} }
 ```
 
-## Tap Mechanics
+or
 
-### How it Works
-
-1. **Tap Detection**: Click/touch the crown → `useTapEffect` triggers
-2. **Particle Creation**: 12 particles spawn at tap location
-3. **Animation**: 
-   - Crown scales down to 0.96, bounces back
-   - Particles burst outward with gravity
-   - Reward text (+0.001) floats up
-4. **State Update**: `useGameState` adds coins and tap count
-5. **Persistence**: `localStorage` saves after every tap
-
-### Performance
-
-- Particles capped at 80 max (configurable)
-- requestAnimationFrame for smooth 60 FPS
-- Respects `prefers-reduced-motion` setting
-- Efficient React re-renders via hooks
-
-## Technologies
-
-- **React 18** - UI framework
-- **TypeScript** - Type safety
-- **Vite** - Build tool
-- **Tailwind CSS** - Styling
-- **Framer Motion** - Animations
-- **localStorage** - State persistence
-
-## Configuration
-
-Edit `src/game/gameConfig.ts` to customize:
-
-```typescript
-export const GAME_CONFIG = {
-  tapReward: 0.001,          // Coins per tap
-  maxParticles: 80,          // Particle limit
-  particleLifetime: 1000,    // Duration (ms)
-  particleGravity: 0.005,    // Physics
-  crownTapDuration: 300,     // Animation speed
-  // ... more config
-};
+```json
+{ "success": false, "error": { "code": "...", "message": "..." } }
 ```
 
-## Telegram Integration
+## Notes
 
-The game works:
-- ✅ In Telegram Mini Apps
-- ✅ In regular browsers
-- ✅ On desktop and mobile
-
-See `src/utils/telegram.ts` for the adapter.
-
-## Storage
-
-Player state stored in `localStorage` with key: `crown_tap_game_player_state`
-
-**Note**: This is temporary/demo data. Backend will replace this in future steps.
-
-## Accessibility
-
-- ♿ Keyboard support (Tab to crown, Enter/Space to tap)
-- 🎨 Focus rings for visibility
-- 🤸 Respects `prefers-reduced-motion`
-- 📝 ARIA labels
-
-## Next Steps
-
-Future implementation:
-- Backend integration
-- Database persistence
-- Level system
-- Tasks system
-- Wallet & withdrawals
-- Admin panel
-- NFT rewards
-
-## License
-
-MIT
+- In development, the frontend uses a `dev:<telegramId>:<username>` initData fallback when Telegram WebApp data is unavailable.
+- Legacy Step 1-3 localStorage values are migrated once through authenticated backend flow with capped limits.
