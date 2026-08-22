@@ -1,256 +1,180 @@
-// API Configuration
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+import {
+  AdConfig,
+  AdminAnalyticsResponse,
+  AdminAuditLogsResponse,
+  AdminConfig,
+  AdminConfigUpdateResponse,
+  AdminUsersResponse,
+  ApiResponse,
+  LoginResponse,
+  ReferralAcceptResponse,
+  ReferralInfo,
+  TapResponse,
+  Task,
+  TaskClaimResponse,
+  TransactionHistoryItem,
+  User,
+} from '../types';
 
-export interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  timestamp: number;
-}
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const AUTH_TOKEN_KEY = 'auth_token';
 
-/**
- * Fetch with error handling
- */
-const fetchApi = async <T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<ApiResponse<T>> => {
+type Primitive = string | number | boolean;
+
+const getAuthToken = (): string | null => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  return localStorage.getItem(AUTH_TOKEN_KEY);
+};
+
+const fetchApi = async <T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> => {
+  const token = getAuthToken();
+
+  const headers = new Headers(options.headers ?? {});
+  if (!headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  if (token) {
+    headers.set('Authorization', 'Bearer ' + token);
+  }
+
   try {
-    const token = localStorage.getItem('auth_token');
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    };
-
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
     const response = await fetch(`${API_URL}${endpoint}`, {
       ...options,
       headers,
     });
 
-    const data: ApiResponse<T> = await response.json();
+    const payload = (await response.json().catch(() => null)) as ApiResponse<T> | null;
 
     if (!response.ok) {
-      console.error(`API Error: ${endpoint}`, data);
       return {
         success: false,
-        error: data.error || 'Request failed',
+        error: payload?.error || `Request failed with status ${response.status}`,
+        code: payload?.code,
+        timestamp: payload?.timestamp ?? Date.now(),
+      };
+    }
+
+    if (payload?.success === false) {
+      return {
+        success: false,
+        error: payload.error || 'Request failed',
+        code: payload.code,
+        timestamp: payload.timestamp ?? Date.now(),
+      };
+    }
+
+    if (!payload) {
+      return {
+        success: false,
+        error: 'Invalid server response',
         timestamp: Date.now(),
       };
     }
 
-    return data;
+    return payload;
   } catch (error) {
-    console.error(`Fetch error: ${endpoint}`, error);
     return {
       success: false,
-      error: 'Network error',
+      error: error instanceof Error ? error.message : 'Network error',
       timestamp: Date.now(),
     };
   }
 };
 
-/**
- * Authentication API
- */
+const toQueryString = (params: Record<string, Primitive | undefined>): string => {
+  const query = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined) {
+      query.set(key, String(value));
+    }
+  });
+
+  const queryString = query.toString();
+  return queryString ? `?${queryString}` : '';
+};
+
 export const authApi = {
   login: (initData: string) =>
-    fetchApi<{
-      token: string;
-      user: {
-        id: string;
-        telegramId: string;
-        balance: string;
-        xp: string;
-        level: number;
-        crownTier: string;
-        referralCode: string;
-        role: string;
-      };
-    }>('/auth/login', {
+    fetchApi<LoginResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ initData }),
     }),
 
-  getMe: () =>
-    fetchApi<{
-      id: string;
-      telegramId: string;
-      firstName?: string;
-      lastName?: string;
-      balance: string;
-      xp: string;
-      level: number;
-      crownTier: string;
-      totalTaps: string;
-      referralCode: string;
-      role: string;
-      createdAt: string;
-      lastLoginAt?: string;
-    }>('/auth/me'),
+  getMe: () => fetchApi<User>('/auth/me'),
 };
 
-/**
- * Gameplay API
- */
 export const gameApi = {
   tap: (idempotencyKey: string, clientTimestamp: number) =>
-    fetchApi<{
-      transactionId: string;
-      reward: string;
-      xp: number;
-      newBalance: string;
-      newLevel: number;
-      leveledUp: boolean;
-    }>('/taps', {
+    fetchApi<TapResponse>('/taps', {
       method: 'POST',
       body: JSON.stringify({ idempotencyKey, clientTimestamp }),
     }),
 
-  getTapHistory: (limit: number = 50) =>
-    fetchApi<
-      Array<{
-        id: string;
-        type: string;
-        amount: string;
-        balanceBefore: string;
-        balanceAfter: string;
-        createdAt: string;
-      }>
-    >(`/taps/history?limit=${limit}`),
+  getTapHistory: (limit = 50) =>
+    fetchApi<TransactionHistoryItem[]>(`/taps/history${toQueryString({ limit })}`),
 };
 
-/**
- * Task API
- */
 export const taskApi = {
-  getTasks: () =>
-    fetchApi<
-      Array<{
-        id: string;
-        title: string;
-        description?: string;
-        type: string;
-        requirement: string;
-        reward: string;
-        xpReward: number;
-        targetCount: number;
-        progress?: {
-          currentCount: number;
-          completed: boolean;
-          claimed: boolean;
-          completedAt?: string;
-          claimedAt?: string;
-        };
-      }>
-    >('/tasks'),
+  getTasks: () => fetchApi<Task[]>('/tasks'),
 
   claimTask: (taskId: string, idempotencyKey: string) =>
-    fetchApi<{
-      transactionId: string;
-      reward: string;
-      xp: number;
-      newBalance: string;
-      newLevel: number;
-      leveledUp: boolean;
-    }>(`/tasks/${taskId}/claim`, {
+    fetchApi<TaskClaimResponse>(`/tasks/${taskId}/claim`, {
       method: 'POST',
       body: JSON.stringify({ idempotencyKey }),
     }),
 };
 
-/**
- * Referral API
- */
 export const referralApi = {
-  getReferrals: () =>
-    fetchApi<{
-      referralCode: string;
-      referralLink: string;
-      stats: {
-        total: number;
-        qualified: number;
-        rewarded: number;
-      };
-      referrals: Array<{
-        id: string;
-        status: string;
-        qualifiedAt?: string;
-        rewardClaimedAt?: string;
-      }>;
-    }>('/referrals'),
+  getReferrals: () => fetchApi<ReferralInfo>('/referrals'),
 
-  acceptReferral: (referralCode: string) =>
-    fetchApi<{
-      referralId: string;
-      status: string;
-    }>(`/referrals/${referralCode}/accept`, {
+  acceptReferral: (code: string) =>
+    fetchApi<ReferralAcceptResponse>(`/referrals/${code}/accept`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    }),
+
+  checkQualification: () =>
+    fetchApi<{ referrals: ReferralInfo['referrals'] }>('/referrals/check-qualification', {
       method: 'POST',
       body: JSON.stringify({}),
     }),
 };
 
-/**
- * Ad API
- */
 export const adApi = {
-  getAdConfig: () =>
-    fetchApi<{
-      provider: string;
-      configured: boolean;
-      note: string;
-    }>('/ads/config'),
+  getAdConfig: () => fetchApi<AdConfig>('/ads/config'),
 
-  recordAdView: (
-    provider: string,
-    adUnitId: string | undefined,
-    clientVerificationToken: string | undefined,
-    idempotencyKey: string
-  ) =>
-    fetchApi<{
-      transactionId: string;
-      reward: string;
-      xp: number;
-      newBalance: string;
-      newLevel: number;
-      leveledUp: boolean;
-    }>('/ads/view', {
+  recordAdView: (provider: string, adUnitId: string | undefined, clientVerificationToken: string | undefined, idempotencyKey: string) =>
+    fetchApi<TapResponse>('/ads/view', {
       method: 'POST',
-      body: JSON.stringify({
-        provider,
-        adUnitId,
-        clientVerificationToken,
-        idempotencyKey,
-      }),
+      body: JSON.stringify({ provider, adUnitId, clientVerificationToken, idempotencyKey }),
     }),
 };
 
-/**
- * Admin API
- */
 export const adminApi = {
-  getConfig: () => fetchApi('/admin/config'),
-  updateConfig: (key: string, value: any, reason?: string) =>
-    fetchApi('/admin/config', {
+  getConfig: () => fetchApi<AdminConfig>('/admin/config'),
+
+  updateConfig: (key: string, value: Primitive, reason?: string) =>
+    fetchApi<AdminConfigUpdateResponse>('/admin/config', {
       method: 'PATCH',
       body: JSON.stringify({ key, value, reason }),
     }),
-  getAuditLogs: (limit: number = 50, offset: number = 0) =>
-    fetchApi(`/admin/audit-logs?limit=${limit}&offset=${offset}`),
-  getUsers: (limit: number = 50, offset: number = 0) =>
-    fetchApi(`/admin/users?limit=${limit}&offset=${offset}`),
-  getAnalytics: (startDate?: string, endDate?: string) => {
-    let url = '/admin/analytics';
-    const params = [];
-    if (startDate) params.push(`startDate=${startDate}`);
-    if (endDate) params.push(`endDate=${endDate}`);
-    if (params.length) url += '?' + params.join('&');
-    return fetchApi(url);
-  },
+
+  getAuditLogs: (limit = 50, offset = 0) =>
+    fetchApi<AdminAuditLogsResponse>(`/admin/audit-logs${toQueryString({ limit, offset })}`),
+
+  getUsers: (limit = 50, offset = 0) =>
+    fetchApi<AdminUsersResponse>(`/admin/users${toQueryString({ limit, offset })}`),
+
+  getAnalytics: (startDate?: string, endDate?: string) =>
+    fetchApi<AdminAnalyticsResponse>(`/admin/analytics${toQueryString({ startDate, endDate })}`),
 };
+
+export { AUTH_TOKEN_KEY };
 
 export default {
   authApi,

@@ -1,13 +1,14 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
-import { validateBody } from '../middleware/validation';
-import { processReward, getUserTransactionHistory } from '../services/reward.service';
-import { prisma } from '../db';
-import { logger } from '../utils/logger';
-import { AuthRequest } from '../types';
-import { CONSTANTS } from '../config/constants';
-import { asyncHandler } from '../middleware/errorHandler';
+import { authenticate } from '../middleware/auth.js';
+import { validateBody } from '../middleware/validation.js';
+import { processReward, getUserTransactionHistory } from '../services/reward.service.js';
+import { updateGameplayTaskProgress, updateSpecialTaskProgress } from '../services/task.service.js';
+import { prisma } from '../db/index.js';
+import { logger } from '../utils/logger.js';
+import { AuthRequest } from '../types/index.js';
+import { CONSTANTS } from '../config/constants.js';
+import { asyncHandler } from '../middleware/errorHandler.js';
 
 const router = Router();
 
@@ -26,7 +27,7 @@ router.post(
   '/',
   authenticate,
   validateBody(TapRequestSchema),
-  asyncHandler(async (req: AuthRequest, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     const { idempotencyKey, clientTimestamp } = req.body as TapRequest;
     const userId = req.user!.id;
 
@@ -50,12 +51,13 @@ router.post(
     const maxTapsPerHour = config?.maxTapsPerHour || CONSTANTS.DEFAULT_MAX_TAPS_PER_HOUR;
     if (tapsThisHour >= maxTapsPerHour) {
       logger.warn(`User ${userId} exceeded tap rate limit`);
-      return res.status(429).json({
+      res.status(429).json({
         success: false,
         error: 'Rate limit exceeded',
         code: 'RATE_LIMIT',
         timestamp: Date.now(),
       });
+      return;
     }
 
     // Record tap
@@ -88,10 +90,14 @@ router.post(
     );
 
     // Update total taps counter
-    await prisma.user.update({
+    const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: { totalTaps: { increment: 1 }, lastTapAt: new Date() },
     });
+
+    // Update server-side task progress (gameplay + level-based tasks)
+    await updateGameplayTaskProgress(userId, updatedUser.totalTaps);
+    await updateSpecialTaskProgress(userId, reward.newLevel);
 
     logger.info(`Tap recorded for user ${userId}`);
 
@@ -117,7 +123,7 @@ router.post(
 router.get(
   '/history',
   authenticate,
-  asyncHandler(async (req: AuthRequest, res: Response) => {
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     const userId = req.user!.id;
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
 

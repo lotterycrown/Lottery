@@ -1,7 +1,7 @@
-import { prisma } from '../db';
-import { logger } from '../utils/logger';
-import { RewardResult } from '../types';
-import { updateUserProgression } from './user.service';
+import { prisma } from '../db/index.js';
+import { logger } from '../utils/logger.js';
+import { RewardResult } from '../types/index.js';
+import { updateUserProgression } from './user.service.js';
 
 /**
  * Process reward for user

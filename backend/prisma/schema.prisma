@@ -43,10 +43,13 @@ model User {
   
   // Relationships
   transactions          Transaction[]
+  taps                  Tap[]
   taskProgress          TaskProgress[]
   ads                   AdView[]
   sessions              Session[]
   auditLogs             AuditLog[]
+  referralsGiven        Referral[]   @relation("ReferrerOf")
+  referralReceived      Referral?    @relation("ReferredBy")
   
   @@index([telegramId])
   @@index([referralCode])
@@ -308,7 +311,7 @@ model GameConfig {
 
 model AuditLog {
   id                String   @id @default(cuid())
-  admin             User     @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  admin             User?    @relation(fields: [adminId], references: [id], onDelete: SetNull)
   adminId           String?
   
   // Action

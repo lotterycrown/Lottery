@@ -1,13 +1,13 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
-import { validateBody } from '../middleware/validation';
-import { prisma } from '../db';
-import { processReward } from '../services/reward.service';
-import { logger } from '../utils/logger';
-import { AuthRequest } from '../types';
-import { CONSTANTS } from '../config/constants';
-import { ValidationError } from '../utils/errors';
+import { authenticate } from '../middleware/auth.js';
+import { validateBody } from '../middleware/validation.js';
+import { prisma } from '../db/index.js';
+import { processReward } from '../services/reward.service.js';
+import { logger } from '../utils/logger.js';
+import { AuthRequest } from '../types/index.js';
+import { CONSTANTS } from '../config/constants.js';
+import { ValidationError } from '../utils/errors.js';
 
 const router = Router();
 
@@ -102,11 +102,12 @@ router.post('/view', authenticate, validateBody(AdViewSchema), async (req: AuthR
   } catch (error) {
     logger.error('Ad view error:', error);
     if (error instanceof ValidationError) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: error.message,
         timestamp: Date.now(),
       });
+      return;
     }
     res.status(500).json({
       success: false,
@@ -120,7 +121,7 @@ router.post('/view', authenticate, validateBody(AdViewSchema), async (req: AuthR
  * GET /ads/config
  * Get ad provider configuration
  */
-router.get('/config', authenticate, async (req: AuthRequest, res: Response) => {
+router.get('/config', authenticate, async (_req: AuthRequest, res: Response): Promise<void> => {
   try {
     const provider = process.env.AD_PROVIDER || CONSTANTS.AD_PROVIDERS.NONE;
 

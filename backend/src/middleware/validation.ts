@@ -1,9 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodSchema, ZodError } from 'zod';
-import { ValidationError } from '../utils/errors';
 
 export const validateBody = (schema: ZodSchema) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
     try {
       const validated = schema.parse(req.body);
       req.body = validated;
@@ -11,12 +10,13 @@ export const validateBody = (schema: ZodSchema) => {
     } catch (error) {
       if (error instanceof ZodError) {
         const message = error.errors[0]?.message || 'Invalid request body';
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: message,
           code: 'VALIDATION_ERROR',
           timestamp: Date.now(),
         });
+        return;
       }
       throw error;
     }
@@ -24,7 +24,7 @@ export const validateBody = (schema: ZodSchema) => {
 };
 
 export const validateQuery = (schema: ZodSchema) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
     try {
       const validated = schema.parse(req.query);
       req.query = validated as any;
@@ -32,12 +32,13 @@ export const validateQuery = (schema: ZodSchema) => {
     } catch (error) {
       if (error instanceof ZodError) {
         const message = error.errors[0]?.message || 'Invalid query parameters';
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: message,
           code: 'VALIDATION_ERROR',
           timestamp: Date.now(),
         });
+        return;
       }
       throw error;
     }

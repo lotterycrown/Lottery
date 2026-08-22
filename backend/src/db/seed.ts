@@ -1,6 +1,6 @@
-import { prisma } from '../db';
-import { logger } from '../utils/logger';
-import { CONSTANTS } from '../config/constants';
+import { prisma } from '../db/index.js';
+import { logger } from '../utils/logger.js';
+import { CONSTANTS } from '../config/constants.js';
 
 /**
  * Seed initial game configuration
@@ -117,7 +117,7 @@ export const seedTasks = async () => {
           description: 'Reach level 30',
           type: CONSTANTS.TASK_TYPES.SPECIAL,
           requirement: 'Reach level 30 (Gold Crown)',
-          reward: BigInt(CONSTANTS.DEFAULT_TASK_REWARD_LARGE * BigInt(2)),
+          reward: BigInt(CONSTANTS.DEFAULT_TASK_REWARD_LARGE * 2),
           xpReward: CONSTANTS.DEFAULT_XP_PER_TASK_LARGE * 2,
           requiredLevel: 1,
           targetCount: 30,
@@ -134,6 +134,45 @@ export const seedTasks = async () => {
 };
 
 /**
+ * Seed initial admin user
+ * Requires ADMIN_TELEGRAM_ID environment variable.
+ * Safe to run multiple times (idempotent).
+ */
+export const seedAdminUser = async () => {
+  const adminTelegramId = process.env.ADMIN_TELEGRAM_ID;
+  if (!adminTelegramId) {
+    logger.info('ADMIN_TELEGRAM_ID not set — skipping admin user seed');
+    return;
+  }
+
+  const telegramId = BigInt(adminTelegramId);
+
+  const existing = await prisma.user.findUnique({ where: { telegramId } });
+  if (existing) {
+    if (existing.role !== 'admin') {
+      await prisma.user.update({ where: { telegramId }, data: { role: 'admin' } });
+      logger.info(`✅ Promoted user ${adminTelegramId} to admin`);
+    } else {
+      logger.info(`Admin user ${adminTelegramId} already exists`);
+    }
+    return;
+  }
+
+  await prisma.user.create({
+    data: {
+      telegramId,
+      role: 'admin',
+      balance: 0,
+      xp: 0,
+      level: 1,
+      crownTier: 'bronze_1',
+    },
+  });
+
+  logger.info(`✅ Admin user created for Telegram ID ${adminTelegramId}`);
+};
+
+/**
  * Run all seeds
  */
 export const runSeeds = async () => {
@@ -141,6 +180,7 @@ export const runSeeds = async () => {
   try {
     await seedGameConfig();
     await seedTasks();
+    await seedAdminUser();
     logger.info('✅ All seeds completed');
   } catch (error) {
     logger.error('❌ Seed failed:', error);

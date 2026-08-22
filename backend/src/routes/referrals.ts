@@ -1,8 +1,10 @@
-import { Router, Request, Response } from 'express';
-import { authenticate } from '../middleware/auth';
-import { prisma } from '../db';
-import { logger } from '../utils/logger';
-import { AuthRequest } from '../types';
+import { Router, Response } from 'express';
+import { authenticate } from '../middleware/auth.js';
+import { processReferralQualification } from '../services/referral.service.js';
+import { prisma } from '../db/index.js';
+import { logger } from '../utils/logger.js';
+import { AuthRequest } from '../types/index.js';
+import { asyncHandler } from '../middleware/errorHandler.js';
 
 const router = Router();
 
@@ -10,8 +12,10 @@ const router = Router();
  * GET /referrals
  * Get referral info for current user
  */
-router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
-  try {
+router.get(
+  '/',
+  authenticate,
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     const userId = req.user!.id;
 
     const user = await prisma.user.findUnique({
@@ -19,16 +23,23 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
     });
 
     if (!user) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'User not found',
         timestamp: Date.now(),
       });
+      return;
     }
 
-    // Get referral statistics
     const referrals = await prisma.referral.findMany({
       where: { referrerId: userId },
+      select: {
+        id: true,
+        status: true,
+        qualifiedAt: true,
+        rewardClaimedAt: true,
+        createdAt: true,
+      },
     });
 
     const stats = {
@@ -46,31 +57,22 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
         referralCode: user.referralCode,
         referralLink,
         stats,
-        referrals: referrals.map((r) => ({
-          id: r.id,
-          status: r.status,
-          qualifiedAt: r.qualifiedAt,
-          rewardClaimedAt: r.rewardClaimedAt,
-        })),
+        referrals,
       },
       timestamp: Date.now(),
     });
-  } catch (error) {
-    logger.error('Get referrals error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to get referrals',
-      timestamp: Date.now(),
-    });
-  }
-});
+  })
+);
 
 /**
  * POST /referrals/:referralCode/accept
- * Accept a referral (called by referred user during signup)
+ * Accept a referral (called by referred user during signup).
+ * Safe: prevents self-referral, duplicate, and concurrent accepts.
  */
-router.post('/:referralCode/accept', authenticate, async (req: AuthRequest, res: Response) => {
-  try {
+router.post(
+  '/:referralCode/accept',
+  authenticate,
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     const { referralCode } = req.params;
     const userId = req.user!.id;
 
@@ -79,35 +81,69 @@ router.post('/:referralCode/accept', authenticate, async (req: AuthRequest, res:
     });
 
     if (!referrer) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'Invalid referral code',
         timestamp: Date.now(),
       });
+      return;
     }
 
     if (referrer.id === userId) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Cannot refer yourself',
         timestamp: Date.now(),
       });
+      return;
     }
 
-    // Link referrer and referred user
-    await prisma.user.update({
-      where: { id: userId },
-      data: { referrerId: referrer.id },
-    });
+    // Use a transaction to atomically check and create the referral relationship
+    let referral;
+    try {
+      referral = await prisma.$transaction(async (tx) => {
+        // Lock the referred user row and check if already referred
+        const currentUser = await tx.user.findUnique({
+          where: { id: userId },
+        });
 
-    // Create referral record
-    const referral = await prisma.referral.create({
-      data: {
-        referrerId: referrer.id,
-        referredId: userId,
-        status: 'pending',
-      },
-    });
+        if (!currentUser) throw new Error('User not found');
+
+        if (currentUser.referrerId) {
+          // Already has a referrer — return existing relationship idempotently
+          const existing = await tx.referral.findUnique({
+            where: { referredId: userId },
+          });
+          if (existing) return existing;
+          throw new Error('ALREADY_REFERRED');
+        }
+
+        // Link referrer to referred user
+        await tx.user.update({
+          where: { id: userId },
+          data: { referrerId: referrer.id },
+        });
+
+        // Create referral record (referredId has @unique constraint — prevents duplicates)
+        return await tx.referral.create({
+          data: {
+            referrerId: referrer.id,
+            referredId: userId,
+            status: 'pending',
+          },
+        });
+      });
+    } catch (error: any) {
+      if (error?.message === 'ALREADY_REFERRED' || error?.code === 'P2002') {
+        res.status(409).json({
+          success: false,
+          error: 'You have already used a referral code',
+          timestamp: Date.now(),
+        });
+        return;
+      }
+      throw error;
+    }
 
     logger.info(`Referral created: ${referrer.id} -> ${userId}`);
 
@@ -119,56 +155,54 @@ router.post('/:referralCode/accept', authenticate, async (req: AuthRequest, res:
       },
       timestamp: Date.now(),
     });
-  } catch (error) {
-    logger.error('Accept referral error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to accept referral',
-      timestamp: Date.now(),
-    });
-  }
-});
+  })
+);
+
+// ============================================================================
+// REFERRAL QUALIFICATION
+// ============================================================================
 
 /**
- * POST /referrals/claim-reward
- * Claim referral reward (after referred user qualifies)
+ * POST /referrals/check-qualification
+ * Trigger qualification check for current user's pending referrals.
+ * Also checks if this user qualifies their own referrer.
  */
-router.post('/claim-reward', authenticate, async (req: AuthRequest, res: Response) => {
-  try {
+router.post(
+  '/check-qualification',
+  authenticate,
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     const userId = req.user!.id;
-    const { idempotencyKey } = req.body as { idempotencyKey: string };
 
-    // Find qualified referrals
-    const referrals = await prisma.referral.findMany({
-      where: {
-        referrerId: userId,
-        status: 'qualified',
-      },
+    // 1. Check if this user qualifies as a referred user (their referrer gets rewarded)
+    const asReferred = await prisma.referral.findUnique({
+      where: { referredId: userId },
     });
 
-    if (referrals.length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'No qualified referrals to reward',
-        timestamp: Date.now(),
-      });
+    if (asReferred && asReferred.status !== 'rewarded') {
+      await processReferralQualification(asReferred.id);
     }
+
+    // 2. Check if any of this user's referrals can now be qualified
+    const pendingReferrals = await prisma.referral.findMany({
+      where: { referrerId: userId, status: { in: ['pending', 'qualified'] } },
+    });
+
+    for (const ref of pendingReferrals) {
+      await processReferralQualification(ref.id);
+    }
+
+    const updated = await prisma.referral.findMany({
+      where: { referrerId: userId },
+      select: { id: true, status: true, qualifiedAt: true, rewardClaimedAt: true },
+    });
 
     res.json({
       success: true,
-      data: {
-        message: 'Referral rewards are processed automatically when referrals qualify',
-      },
+      data: { referrals: updated },
       timestamp: Date.now(),
     });
-  } catch (error) {
-    logger.error('Claim referral reward error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to claim referral reward',
-      timestamp: Date.now(),
-    });
-  }
-});
+  })
+);
 
 export default router;
+

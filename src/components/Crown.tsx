@@ -3,7 +3,7 @@
  * 3D-looking metallic crown with idle animations.
  */
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { GAME_CONFIG } from '../game/gameConfig';
 
@@ -54,6 +54,7 @@ export const Crown: React.FC<CrownProps> = ({
       }}
       whileHover={!isAnimating ? { scale: 1.05 } : {}}
       whileTap={isAnimating ? {} : { scale: GAME_CONFIG.crownTapScale }}
+      style={{ scale }}
     >
       {/* Crown SVG */}
       <svg

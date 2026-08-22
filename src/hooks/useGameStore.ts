@@ -1,22 +1,9 @@
 import { create } from 'zustand';
-import { gameApi } from '../services/api';
 import { v4 as uuidv4 } from 'uuid';
+import { authApi, gameApi } from '../services/api';
+import { GameStoreState } from '../types';
 
-interface GameState {
-  balance: bigint;
-  xp: bigint;
-  level: number;
-  crownTier: string;
-  totalTaps: bigint;
-  loading: boolean;
-  error: string | null;
-  pendingReward: boolean;
-
-  tap: () => Promise<void>;
-  syncBalance: (balance: string, xp: string, level: number, crownTier: string, totalTaps: string) => void;
-}
-
-export const useGameStore = create<GameState>((set) => ({
+export const useGameStore = create<GameStoreState>((set) => ({
   balance: BigInt(0),
   xp: BigInt(0),
   level: 1,
@@ -28,25 +15,47 @@ export const useGameStore = create<GameState>((set) => ({
 
   tap: async () => {
     set({ pendingReward: true, error: null });
-    try {
-      const idempotencyKey = uuidv4();
-      const clientTimestamp = Date.now();
 
-      const response = await gameApi.tap(idempotencyKey, clientTimestamp);
-      if (response.success && response.data) {
-        set({
-          balance: BigInt(response.data.newBalance),
-          xp: BigInt(response.data.xp),
-          level: response.data.newLevel,
-          crownTier: response.data.leveledUp ? response.data.leveledUp ? 'updated' : response.data.crownTier : '',
-          totalTaps: (state) => state.totalTaps + BigInt(1),
-          pendingReward: false,
-        });
-      } else {
-        set({ error: response.error || 'Tap failed', pendingReward: false });
+    try {
+      const response = await gameApi.tap(uuidv4(), Date.now());
+
+      if (!response.success || !response.data) {
+        set({ pendingReward: false, error: response.error || 'Tap failed' });
+        return false;
       }
+      const tapData = response.data;
+
+      const meResponse = await authApi.getMe();
+
+      if (meResponse.success && meResponse.data) {
+        set({
+          balance: BigInt(meResponse.data.balance),
+          xp: BigInt(meResponse.data.xp),
+          level: meResponse.data.level,
+          crownTier: meResponse.data.crownTier,
+          totalTaps: BigInt(meResponse.data.totalTaps ?? '0'),
+          pendingReward: false,
+          error: null,
+        });
+        return true;
+      }
+
+      set((state) => ({
+        balance: BigInt(tapData.newBalance),
+        level: tapData.newLevel,
+        xp: state.xp,
+        crownTier: state.crownTier,
+        totalTaps: state.totalTaps,
+        pendingReward: false,
+        error: meResponse.error || 'Tap succeeded but failed to refresh profile',
+      }));
+      return true;
     } catch (error) {
-      set({ error: 'Network error', pendingReward: false });
+      set({
+        pendingReward: false,
+        error: error instanceof Error ? error.message : 'Tap failed',
+      });
+      return false;
     }
   },
 
@@ -57,6 +66,9 @@ export const useGameStore = create<GameState>((set) => ({
       level,
       crownTier,
       totalTaps: BigInt(totalTaps),
+      error: null,
     });
   },
+
+  clearError: () => set({ error: null }),
 }));
