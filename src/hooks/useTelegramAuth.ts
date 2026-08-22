@@ -1,41 +1,46 @@
-import React, { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuthStore } from './useAuthStore';
-import { getTelegramWebApp } from '../utils/telegram';
+import { getTelegramInitData, initializeTelegram } from '../utils/telegram';
 
 /**
  * Hook to initialize Telegram authentication
  */
 export const useTelegramAuth = () => {
-  const { login } = useAuthStore();
-  const [isInitializing, setIsInitializing] = React.useState(true);
+  const { login, token, user } = useAuthStore();
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const initTelegram = async () => {
+      if (token || user) {
+        setIsInitializing(false);
+        return;
+      }
+
       try {
-        const webApp = getTelegramWebApp();
+        const webApp = initializeTelegram();
         if (!webApp) {
-          console.warn('Telegram WebApp not available');
           setIsInitializing(false);
           return;
         }
 
-        webApp.ready();
-        webApp.expand();
-
-        // Get initData from WebApp
-        const initData = webApp.initData;
-        if (initData) {
-          await login(initData);
+        const initData = getTelegramInitData();
+        if (!initData) {
+          setError('Missing Telegram init data');
+          setIsInitializing(false);
+          return;
         }
-      } catch (error) {
-        console.error('Telegram auth failed:', error);
+
+        await login(initData);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Telegram authentication failed');
       } finally {
         setIsInitializing(false);
       }
     };
 
-    initTelegram();
-  }, [login]);
+    void initTelegram();
+  }, [login, token, user]);
 
-  return { isInitializing };
+  return { isInitializing, error };
 };

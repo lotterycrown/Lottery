@@ -1,63 +1,31 @@
 /**
- * Game state management hook.
- * Manages player progress and persistence.
+ * Game state adapter hook.
+ * Bridges server-authoritative Zustand state to UI shape.
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { PlayerProgress, createInitialPlayerState } from '../game/playerState';
-import { loadPlayerState, savePlayerState } from '../utils/storage';
-import { GAME_CONFIG } from '../game/gameConfig';
+import { useMemo } from 'react';
+import { PlayerProgress } from '../game/playerState';
+import { useGameStore } from './useGameStore';
+
+const bigintToNumber = (value: bigint): number => Number(value) / 1_000_000;
 
 export const useGameState = () => {
-  const [playerState, setPlayerState] = useState<PlayerProgress | null>(null);
+  const { balance, xp, level, crownTier, totalTaps, tap } = useGameStore();
 
-  // Load initial state from storage
-  useEffect(() => {
-    const loaded = loadPlayerState();
-    setPlayerState(loaded);
-  }, []);
+  const playerState = useMemo<PlayerProgress>(() => ({
+    level,
+    xp: bigintToNumber(xp),
+    coins: bigintToNumber(balance),
+    totalTaps: Number(totalTaps),
+    crownTier,
+  }), [balance, xp, level, crownTier, totalTaps]);
 
-  // Save state whenever it changes
-  useEffect(() => {
-    if (playerState) {
-      savePlayerState(playerState);
-    }
-  }, [playerState]);
-
-  const addCoins = useCallback((amount: number) => {
-    setPlayerState((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        coins: Math.round((prev.coins + amount) * 100000) / 100000, // Avoid floating point errors
-      };
-    });
-  }, []);
-
-  const incrementTaps = useCallback(() => {
-    setPlayerState((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        totalTaps: prev.totalTaps + 1,
-      };
-    });
-  }, []);
-
-  const handleTap = useCallback(() => {
-    addCoins(GAME_CONFIG.tapReward);
-    incrementTaps();
-  }, [addCoins, incrementTaps]);
-
-  const reset = useCallback(() => {
-    setPlayerState(createInitialPlayerState());
-  }, []);
+  const handleTap = () => {
+    void tap();
+  };
 
   return {
     playerState,
     handleTap,
-    addCoins,
-    incrementTaps,
-    reset,
   };
 };
