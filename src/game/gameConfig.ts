@@ -5,7 +5,7 @@
 
 export const GAME_CONFIG = {
   // Tap mechanics
-  tapReward: 0.001,
+  tapRewardMicroUnits: 1_000n,
   
   // Player progression
   initialLevel: 1,
