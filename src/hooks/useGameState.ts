@@ -44,6 +44,16 @@ export const useGameState = () => {
     });
   }, []);
 
+  const addXp = useCallback((amount: number) => {
+    setPlayerState((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        xp: prev.xp + amount,
+      };
+    });
+  }, []);
+
   const handleTap = useCallback(() => {
     addCoins(GAME_CONFIG.tapReward);
     incrementTaps();
@@ -57,6 +67,7 @@ export const useGameState = () => {
     playerState,
     handleTap,
     addCoins,
+    addXp,
     incrementTaps,
     reset,
   };

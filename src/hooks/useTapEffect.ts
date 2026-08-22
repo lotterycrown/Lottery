@@ -11,6 +11,7 @@ export interface TapEffectState {
   isTapping: boolean;
   particles: Particle[];
   rewardPosition: { x: number; y: number; opacity: number } | null;
+  rewardText: string;
 }
 
 export const useTapEffect = () => {
@@ -18,9 +19,10 @@ export const useTapEffect = () => {
     isTapping: false,
     particles: [],
     rewardPosition: null,
+    rewardText: `+${GAME_CONFIG.tapReward.toFixed(3)}`,
   });
 
-  const triggerTap = useCallback((x: number, y: number) => {
+  const triggerTap = useCallback((x: number, y: number, rewardText = `+${GAME_CONFIG.tapReward.toFixed(3)}`) => {
     setTapEffect((prev) => {
       // Create new particles
       const newParticles: Particle[] = [];
@@ -45,6 +47,7 @@ export const useTapEffect = () => {
         isTapping: true,
         particles: allParticles,
         rewardPosition: { x, y, opacity: 1 },
+        rewardText,
       };
     });
 

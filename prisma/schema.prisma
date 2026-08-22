@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum AdSessionStatus {
+  CREATED
+  STARTED
+  COMPLETED
+  VERIFIED
+  REWARDED
+  FAILED
+  EXPIRED
+}
+
+enum RewardTransactionType {
+  TAP_REWARD
+  TASK_REWARD
+  AD_REWARD
+}
+
+model User {
+  id              String             @id @default(cuid())
+  createdAt       DateTime           @default(now())
+  playerProgress  PlayerProgress?
+  adSessions      AdSession[]
+  adDailyUsage    AdDailyUsage[]
+  adEvents        AdEvent[]
+  rewards         RewardTransaction[]
+}
+
+model PlayerProgress {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  coinsMicro BigInt   @default(0)
+  xp         Int      @default(0)
+  level      Int      @default(1)
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AdConfig {
+  id              String   @id @default(cuid())
+  enabled         Boolean  @default(true)
+  provider        String
+  rewardMicro     Int
+  rewardXp        Int
+  dailyUserLimit  Int
+  cooldownSeconds Int
+  updatedAt       DateTime @updatedAt
+}
+
+model AdSession {
+  id               String          @id @default(cuid())
+  userId           String
+  provider         String
+  placementId      String
+  status           AdSessionStatus @default(CREATED)
+  transactionId    String?         @unique
+  verificationData String?
+  createdAt        DateTime        @default(now())
+  completedAt      DateTime?
+  rewardedAt       DateTime?
+  expiresAt        DateTime
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events           AdEvent[]
+
+  @@index([userId, createdAt])
+  @@index([status, expiresAt])
+}
+
+model AdDailyUsage {
+  id           String   @id @default(cuid())
+  userId       String
+  date         String
+  completedAds Int      @default(0)
+  rewardedAds  Int      @default(0)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+}
+
+model AdEvent {
+  id          String    @id @default(cuid())
+  userId      String
+  adSessionId String?
+  eventType   String
+  provider    String
+  placementId String?
+  metadata    String?
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  adSession   AdSession? @relation(fields: [adSessionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([adSessionId])
+}
+
+model RewardTransaction {
+  id        String                @id @default(cuid())
+  userId    String
+  type      RewardTransactionType
+  source    String
+  sourceId  String                @unique
+  amount    BigInt
+  xp        Int
+  createdAt DateTime              @default(now())
+  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
