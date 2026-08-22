@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ReferralStatus {
+  PENDING
+  QUALIFIED
+  REWARDED
+  REJECTED
+}
+
+model ReferralCode {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  code      String   @unique
+  createdAt DateTime @default(now())
+  isActive  Boolean  @default(true)
+
+  referrals Referral[]
+
+  @@index([createdAt])
+}
+
+model Referral {
+  id             String         @id @default(cuid())
+  referrerId     String
+  referredUserId String         @unique
+  referralCodeId String
+  status         ReferralStatus @default(PENDING)
+  createdAt      DateTime       @default(now())
+  qualifiedAt    DateTime?
+  rewardedAt     DateTime?
+
+  referralCode ReferralCode @relation(fields: [referralCodeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([referrerId, referredUserId])
+  @@index([referrerId])
+  @@index([referredUserId])
+  @@index([referralCodeId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ReferralConfig {
+  id                       String   @id @default(cuid())
+  enabled                  Boolean  @default(true)
+  referrerRewardMicro      Int      @default(50000)
+  referredUserRewardMicro  Int      @default(10000)
+  referrerRewardXp         Int      @default(100)
+  referredUserRewardXp     Int      @default(50)
+  qualificationRequirement Json
+  maxReferralsPerDay       Int      @default(100)
+  updatedAt                DateTime @updatedAt
+  updatedBy                String
+}
