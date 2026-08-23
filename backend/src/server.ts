@@ -2,17 +2,17 @@ import express, { Express } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import { logger } from './utils/logger';
-import { errorHandler } from './middleware/errorHandler';
-import { prisma } from './db';
+import { logger } from './utils/logger.js';
+import { errorHandler } from './middleware/errorHandler.js';
+import { prisma } from './db/index.js';
 
-import authRoutes from './routes/auth';
-import tapsRoutes from './routes/taps';
-import tasksRoutes from './routes/tasks';
-import referralsRoutes from './routes/referrals';
-import adsRoutes from './routes/ads';
-import adminRoutes from './routes/admin';
-import healthRoutes from './routes/health';
+import authRoutes from './routes/auth.js';
+import tapsRoutes from './routes/taps.js';
+import tasksRoutes from './routes/tasks.js';
+import referralsRoutes from './routes/referrals.js';
+import adsRoutes from './routes/ads.js';
+import adminRoutes from './routes/admin.js';
+import healthRoutes from './routes/health.js';
 
 const app: Express = express();
 const PORT = process.env.PORT || 3001;
@@ -118,7 +118,11 @@ const start = async () => {
       logger.info(`🤖 Telegram Bot: ${process.env.TELEGRAM_BOT_USERNAME || 'not configured'}`);
     });
   } catch (error) {
-    logger.error('❌ Failed to start server:', error);
+    if (error instanceof Error) {
+      logger.error('❌ Failed to start server:', error.message);
+    } else {
+      logger.error('❌ Failed to start server with unknown error:', error);
+    }
     process.exit(1);
   }
 };
