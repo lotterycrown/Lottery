@@ -1,13 +1,13 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
-import { authenticate, optionalAuth } from '../middleware/auth';
-import { validateBody } from '../middleware/validation';
-import { findOrCreateUser, generateUserToken } from '../services/user.service';
-import { getTelegramUserFromInitData } from '../utils/telegram';
-import { prisma } from '../db';
-import { logger } from '../utils/logger';
-import { AuthRequest } from '../types';
-import { asyncHandler } from '../middleware/errorHandler';
+import { authenticate, optionalAuth } from '../middleware/auth.js';
+import { validateBody } from '../middleware/validation.js';
+import { findOrCreateUser, generateUserToken } from '../services/user.service.js';
+import { getTelegramUserFromInitData } from '../utils/telegram.js';
+import { prisma } from '../db/index.js';
+import { logger } from '../utils/logger.js';
+import type { AuthRequest } from '../types/index.js';
+import { asyncHandler } from '../middleware/errorHandler.js';
 
 const router = Router();
 
