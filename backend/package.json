@@ -4,12 +4,12 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "prisma generate && tsc -p tsconfig.build.json",
+    "build": "DATABASE_URL=${DATABASE_URL:-postgresql://user:pass@localhost:5432/db} prisma generate && tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
     "lint": "eslint src --ext .ts",
     "test": "vitest",
     "test:run": "vitest run",
-    "prisma:generate": "prisma generate",
+    "prisma:generate": "DATABASE_URL=${DATABASE_URL:-postgresql://user:pass@localhost:5432/db} prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:prod": "prisma migrate deploy",
     "prisma:studio": "prisma studio"
