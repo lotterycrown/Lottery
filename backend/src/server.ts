@@ -1,4 +1,6 @@
 import express, { Express } from 'express';
+import path from 'path';
+import fs from 'fs';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -47,6 +49,18 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// Serve frontend build (production: single service serves both API + frontend)
+// Try multiple candidate locations (start command may run from root or backend/)
+const candidates = [
+  path.resolve(process.cwd(), '../dist'),   // cwd is backend/
+  path.resolve(process.cwd(), 'dist'),      // cwd is repo root
+  path.resolve(process.cwd(), '../../dist'), // safety fallback
+];
+const frontendDist = candidates.find((p) => fs.existsSync(path.join(p, 'index.html'))) || '';
+if (frontendDist) {
+  app.use(express.static(frontendDist));
+}
+
 // Stricter rate limit for auth endpoints
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -86,6 +100,10 @@ app.use('/admin', adminRoutes);
 // ============================================================================
 
 app.use((req, res) => {
+  // SPA fallback: non-API GET requests serve the frontend
+  if (frontendDist && req.method === 'GET' && !req.path.startsWith('/api') && req.path !== '/health') {
+    return res.sendFile(path.join(frontendDist, 'index.html'));
+  }
   res.status(404).json({
     success: false,
     error: 'Endpoint not found',
