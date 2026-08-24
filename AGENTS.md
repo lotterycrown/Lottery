@@ -16,6 +16,10 @@
 - Server binds `0.0.0.0` on `process.env.PORT`; health check at `/health`.
 - Env: `DATABASE_URL`, `JWT_SECRET`, `TELEGRAM_BOT_TOKEN`, `NODE_ENV=production`.
 
+## Render deployment
+- Render installs with NODE_ENV=production which SKIPS devDependencies — everything needed at build time must be in `dependencies`: typescript, tsx, @types/*, prisma CLI, @types/node.
+- Verified by simulating a production-only install (`yarn install --production`) + build in a clean checkout.
+
 ## Gotchas
 - pino v8 + NodeNext: use `import { pino } from 'pino'` (default import is not callable).
 - `@types/uuid` must stay at ^9 (v10+ is an empty stub that breaks `tsc`).
