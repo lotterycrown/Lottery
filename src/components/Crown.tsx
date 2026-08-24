@@ -5,17 +5,23 @@
 
 import React, { useRef } from 'react';
 import { motion } from 'framer-motion';
-import { GAME_CONFIG } from '../game/gameConfig';
+import { GAME_CONFIG, getCrownTierInfo, CrownTierInfo } from '../game/gameConfig';
 
 interface CrownProps {
+  scale?: number;
+  crownTier?: string;
   onTap: (e: React.PointerEvent<HTMLDivElement>) => void;
   isAnimating?: boolean;
 }
 
 export const Crown: React.FC<CrownProps> = ({
+  scale = 1,
+  crownTier = 'bronze_1',
   onTap,
   isAnimating = false,
 }) => {
+  const tier: CrownTierInfo = getCrownTierInfo(crownTier);
+  const [light, mid, dark] = tier.gradient;
   const crownRef = useRef<HTMLDivElement>(null);
   const prefersReducedMotion =
     typeof window !== 'undefined' &&
@@ -44,6 +50,7 @@ export const Crown: React.FC<CrownProps> = ({
       animate={{
         y: prefersReducedMotion ? 0 : [0, -8, 0],
         rotateZ: prefersReducedMotion ? 0 : [0, 1, -1, 0],
+        scale,
       }}
       transition={{
         duration: GAME_CONFIG.idleAnimationDuration / 1000,
@@ -61,14 +68,14 @@ export const Crown: React.FC<CrownProps> = ({
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         className="drop-shadow-2xl"
-        style={{ filter: 'drop-shadow(0 0 40px rgba(212, 175, 55, 0.3))' }}
+        style={{ filter: `drop-shadow(0 0 40px ${tier.glowColor})` }}
       >
         {/* Gradient definitions */}
         <defs>
           <linearGradient id="crownGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" style={{ stopColor: '#f4d03f', stopOpacity: 1 }} />
-            <stop offset="50%" style={{ stopColor: '#d4af37', stopOpacity: 1 }} />
-            <stop offset="100%" style={{ stopColor: '#b8860b', stopOpacity: 1 }} />
+            <stop offset="0%" style={{ stopColor: light, stopOpacity: 1 }} />
+            <stop offset="50%" style={{ stopColor: mid, stopOpacity: 1 }} />
+            <stop offset="100%" style={{ stopColor: dark, stopOpacity: 1 }} />
           </linearGradient>
           <radialGradient id="crownHighlight" cx="35%" cy="35%">
             <stop offset="0%" style={{ stopColor: '#ffffff', stopOpacity: 0.6 }} />
@@ -118,13 +125,30 @@ export const Crown: React.FC<CrownProps> = ({
           opacity="0.5"
         />
 
-        {/* Jewel-like accent on center peak */}
-        <circle cx="140" cy="50" r="8" fill="#f4d03f" opacity="0.8" />
+        {/* Jewel-like accent on center peak (always present) */}
+        <circle cx="140" cy="50" r="8" fill={light} opacity="0.85" />
         <circle cx="140" cy="50" r="5" fill="#ffffff" opacity="0.6" />
 
-        {/* Small decorative gems */}
-        <circle cx="110" cy="100" r="5" fill="#d4af37" opacity="0.7" />
-        <circle cx="170" cy="100" r="5" fill="#d4af37" opacity="0.7" />
+        {/* Tier gems: 2nd sub-tier adds side gems */}
+        {tier.gems >= 2 && (
+          <>
+            <circle cx="110" cy="100" r="6" fill={mid} opacity="0.85" />
+            <circle cx="110" cy="100" r="3.5" fill="#ffffff" opacity="0.6" />
+            <circle cx="170" cy="100" r="6" fill={mid} opacity="0.85" />
+            <circle cx="170" cy="100" r="3.5" fill="#ffffff" opacity="0.6" />
+          </>
+        )}
+
+        {/* Tier gems: 3rd sub-tier adds a large center gem + band studs */}
+        {tier.gems >= 3 && (
+          <>
+            <circle cx="140" cy="120" r="9" fill={light} opacity="0.9" />
+            <circle cx="140" cy="120" r="5.5" fill="#ffffff" opacity="0.65" />
+            <circle cx="95" cy="178" r="4" fill={light} opacity="0.8" />
+            <circle cx="140" cy="183" r="4" fill={light} opacity="0.8" />
+            <circle cx="185" cy="178" r="4" fill={light} opacity="0.8" />
+          </>
+        )}
 
         {/* Shadow filter */}
         <filter id="shadow">

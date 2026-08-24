@@ -10,15 +10,17 @@ import { GAME_CONFIG } from '../game/gameConfig';
 interface TapRewardProps {
   x: number;
   y: number;
+  opacity: number;
 }
 
-export const TapReward: React.FC<TapRewardProps> = ({ x, y }) => {
+export const TapReward: React.FC<TapRewardProps> = ({ x, y, opacity }) => {
   return (
     <motion.div
       className="fixed pointer-events-none text-sm font-bold text-bronze-400"
       style={{
         left: `${x}px`,
         top: `${y}px`,
+        opacity,
       }}
       initial={{ opacity: 1, y: 0 }}
       animate={{
