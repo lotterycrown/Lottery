@@ -63,6 +63,7 @@ export const Home: React.FC = () => {
         {/* Crown */}
         <Crown
           scale={tapEffect.isTapping ? 0.96 : 1}
+          level={playerState.level}
           crownTier={playerState.crownTier}
           onTap={handleCrownTap}
           isAnimating={tapEffect.isTapping}
