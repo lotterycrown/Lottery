@@ -1,13 +1,14 @@
-import { prisma } from '../db';
-import { logger } from '../utils/logger';
-import { generateToken } from '../utils/jwt';
-import { NotFoundError } from '../utils/errors';
-import { CONSTANTS } from '../config/constants';
+import { prisma } from '../db/index.js';
+import { logger } from '../utils/logger.js';
+import { generateToken } from '../utils/jwt.js';
+import { NotFoundError } from '../utils/errors.js';
+import { CONSTANTS } from '../config/constants.js';
+import type { TelegramUser } from '../utils/telegram.js';
 
 /**
  * Find or create user from Telegram
  */
-export const findOrCreateUser = async (telegramId: bigint, userData?: any) => {
+export const findOrCreateUser = async (telegramId: bigint, userData?: TelegramUser) => {
   let user = await prisma.user.findUnique({
     where: { telegramId },
   });

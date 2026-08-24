@@ -51,7 +51,6 @@ export const Home: React.FC = () => {
         <TapReward
           x={tapEffect.rewardPosition.x}
           y={tapEffect.rewardPosition.y}
-          opacity={tapEffect.rewardPosition.opacity}
         />
       )}
 
@@ -62,7 +61,6 @@ export const Home: React.FC = () => {
       <div className="flex-1 flex flex-col items-center justify-center gap-8 pb-24">
         {/* Crown */}
         <Crown
-          scale={tapEffect.isTapping ? 0.96 : 1}
           onTap={handleCrownTap}
           isAnimating={tapEffect.isTapping}
         />

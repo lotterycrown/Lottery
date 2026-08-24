@@ -8,6 +8,7 @@ import { logger } from '../utils/logger.js';
 import type { AuthRequest } from '../types/index.js';
 import { CONSTANTS } from '../config/constants.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
+import { Prisma } from '@prisma/client';
 
 const router = Router();
 
@@ -69,10 +70,10 @@ router.post(
         ipAddress: req.clientIp,
         userAgent: req.headers['user-agent'],
       },
-    }).catch((error) => {
+    }).catch((error: unknown) => {
       // Duplicate key error
-      if ((error as any).code === 'P2002') {
-        return null as any;
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        return null;
       }
       throw error;
     });
@@ -95,7 +96,7 @@ router.post(
 
     logger.info(`Tap recorded for user ${userId}`);
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         transactionId: reward.transactionId,
@@ -123,7 +124,7 @@ router.get(
 
     const transactions = await getUserTransactionHistory(userId, limit);
 
-    res.json({
+    return res.json({
       success: true,
       data: transactions.map((t) => ({
         id: t.id,

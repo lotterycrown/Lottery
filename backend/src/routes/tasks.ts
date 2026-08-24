@@ -64,7 +64,7 @@ router.get(
       };
     });
 
-    res.json({
+    return res.json({
       success: true,
       data: tasksWithProgress,
       timestamp: Date.now(),
@@ -191,7 +191,7 @@ router.post(
 
     logger.info(`Task claimed by user ${userId}: ${taskId}`);
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         transactionId: reward.transactionId,

@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
-import { prisma } from '../db';
-import { processReward } from '../services/reward.service';
-import { calculateLevel, calculateCrownTier } from '../services/user.service';
-import { CONSTANTS } from '../config/constants';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { prisma } from '../db/index.js';
+import { processReward } from '../services/reward.service.js';
+import { calculateLevel, calculateCrownTier } from '../services/user.service.js';
+import { CONSTANTS } from '../config/constants.js';
 
 describe('Reward Service', () => {
   let testUserId: string;
@@ -11,7 +11,7 @@ describe('Reward Service', () => {
     // Create test user
     const user = await prisma.user.create({
       data: {
-        telegramId: BigInt(Math.random() * 1000000),
+        telegramId: BigInt(Math.floor(Math.random() * 1000000)),
         balance: 0,
         xp: 0,
         level: 1,

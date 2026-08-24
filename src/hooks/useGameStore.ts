@@ -33,19 +33,19 @@ export const useGameStore = create<GameState>((set) => ({
       const clientTimestamp = Date.now();
 
       const response = await gameApi.tap(idempotencyKey, clientTimestamp);
-      if (response.success && response.data) {
-        set({
-          balance: BigInt(response.data.newBalance),
-          xp: BigInt(response.data.xp),
-          level: response.data.newLevel,
-          crownTier: response.data.leveledUp ? response.data.leveledUp ? 'updated' : response.data.crownTier : '',
-          totalTaps: (state) => state.totalTaps + BigInt(1),
+      const data = response.data;
+      if (response.success && data) {
+        set((state) => ({
+          balance: BigInt(data.newBalance),
+          xp: state.xp + BigInt(data.xp),
+          level: data.newLevel,
+          totalTaps: state.totalTaps + BigInt(1),
           pendingReward: false,
-        });
+        }));
       } else {
         set({ error: response.error || 'Tap failed', pendingReward: false });
       }
-    } catch (error) {
+    } catch {
       set({ error: 'Network error', pendingReward: false });
     }
   },

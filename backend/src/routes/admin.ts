@@ -1,11 +1,14 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
-import { authenticate, requireAdmin } from '../middleware/auth';
-import { validateBody } from '../middleware/validation';
-import { prisma } from '../db';
-import { logger } from '../utils/logger';
-import { AuthRequest } from '../types';
-import { ValidationError } from '../utils/errors';
+import { Prisma } from '@prisma/client';
+import type { GameConfig } from '@prisma/client';
+import { authenticate, requireAdmin } from '../middleware/auth.js';
+import { validateBody } from '../middleware/validation.js';
+import { prisma } from '../db/index.js';
+import { logger } from '../utils/logger.js';
+import { AuthRequest } from '../types/index.js';
+import { ValidationError } from '../utils/errors.js';
+import { serializeBigInt } from '../utils/serialize.js';
 
 const router = Router();
 
@@ -21,7 +24,7 @@ type UpdateConfigRequest = z.infer<typeof UpdateConfigSchema>;
  * GET /admin/config
  * Get current game configuration
  */
-router.get('/config', authenticate, requireAdmin, async (req: AuthRequest, res: Response) => {
+router.get('/config', authenticate, requireAdmin, async (_req: AuthRequest, res: Response) => {
   try {
     const config = await prisma.gameConfig.findUnique({
       where: { id: 'default' },
@@ -35,14 +38,14 @@ router.get('/config', authenticate, requireAdmin, async (req: AuthRequest, res: 
       });
     }
 
-    res.json({
+    return res.json({
       success: true,
-      data: config,
+      data: serializeBigInt(config),
       timestamp: Date.now(),
     });
   } catch (error) {
     logger.error('Get config error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to get config',
       timestamp: Date.now(),
@@ -81,10 +84,15 @@ router.patch(
         'maxTapsPerHour',
         'tapCooldownMs',
         'taskClaimCooldownHours',
-      ];
+      ] as const;
 
-      if (!validKeys.includes(key)) {
+      if (!(validKeys as readonly string[]).includes(key)) {
         throw new ValidationError(`Invalid config key: ${key}`);
+      }
+
+      // All configurable values are numeric
+      if (typeof value !== 'number') {
+        throw new ValidationError(`Config value for ${key} must be a number`);
       }
 
       // Get current config
@@ -96,15 +104,15 @@ router.patch(
         throw new ValidationError('Config not found');
       }
 
-      const previousValue = (currentConfig as any)[key];
+      const previousValue = currentConfig[key as keyof GameConfig];
 
-      // Update config
+      // Update config (key is validated against the whitelist above)
       const updated = await prisma.gameConfig.update({
         where: { id: 'default' },
         data: {
           [key]: value,
           updatedBy: adminId,
-        },
+        } as Prisma.GameConfigUpdateInput,
       });
 
       // Log audit trail
@@ -114,7 +122,7 @@ router.patch(
           action: 'config_update',
           resourceType: 'config',
           resourceId: 'default',
-          previousValue: { [key]: previousValue },
+          previousValue: serializeBigInt({ [key]: previousValue }) as Prisma.InputJsonValue,
           newValue: { [key]: value },
           reason,
           ipAddress: req.clientIp,
@@ -124,13 +132,13 @@ router.patch(
 
       logger.info(`Admin ${adminId} updated config: ${key} = ${value}`);
 
-      res.json({
+      return res.json({
         success: true,
         data: {
           key,
-          previousValue,
+          previousValue: serializeBigInt(previousValue),
           newValue: value,
-          config: updated,
+          config: serializeBigInt(updated),
         },
         timestamp: Date.now(),
       });
@@ -143,7 +151,7 @@ router.patch(
           timestamp: Date.now(),
         });
       }
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         error: 'Failed to update config',
         timestamp: Date.now(),
@@ -169,7 +177,7 @@ router.get('/audit-logs', authenticate, requireAdmin, async (req: AuthRequest, r
 
     const total = await prisma.auditLog.count();
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         logs,
@@ -181,7 +189,7 @@ router.get('/audit-logs', authenticate, requireAdmin, async (req: AuthRequest, r
     });
   } catch (error) {
     logger.error('Get audit logs error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to get audit logs',
       timestamp: Date.now(),
@@ -219,7 +227,7 @@ router.get('/users', authenticate, requireAdmin, async (req: AuthRequest, res: R
 
     const total = await prisma.user.count();
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         users: users.map((u) => ({
@@ -236,7 +244,7 @@ router.get('/users', authenticate, requireAdmin, async (req: AuthRequest, res: R
     });
   } catch (error) {
     logger.error('Get users error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to get users',
       timestamp: Date.now(),
@@ -245,7 +253,7 @@ router.get('/users', authenticate, requireAdmin, async (req: AuthRequest, res: R
 });
 
 /**
- * POST /admin/analytics
+ * GET /admin/analytics
  * Get analytics for date range
  */
 router.get('/analytics', authenticate, requireAdmin, async (req: AuthRequest, res: Response) => {
@@ -272,20 +280,22 @@ router.get('/analytics', authenticate, requireAdmin, async (req: AuthRequest, re
       totalTasksClaimed: analytics.reduce((sum, a) => sum + Number(a.totalTasksClaimed), 0),
       totalAdsWatched: analytics.reduce((sum, a) => sum + Number(a.totalAdsWatched), 0),
       totalRewardsPaid: analytics.reduce((sum, a) => sum + Number(a.totalRewardsPaid), 0),
-      averageBalance: analytics.reduce((sum, a) => sum + Number(a.averageBalance), 0) / analytics.length,
+      averageBalance: analytics.length
+        ? analytics.reduce((sum, a) => sum + Number(a.averageBalance), 0) / analytics.length
+        : 0,
     };
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         summary,
-        daily: analytics,
+        daily: serializeBigInt(analytics),
       },
       timestamp: Date.now(),
     });
   } catch (error) {
     logger.error('Get analytics error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to get analytics',
       timestamp: Date.now(),

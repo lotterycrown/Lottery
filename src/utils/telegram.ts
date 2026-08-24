@@ -8,16 +8,33 @@ interface TelegramWebApp {
   ready?: () => void;
   expand?: () => void;
   isExpanded?: boolean;
+  initData?: string;
+}
+
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp?: TelegramWebApp;
+    };
+  }
 }
 
 let telegramWebApp: TelegramWebApp | null = null;
 
 /**
+ * Get the Telegram WebApp object if running inside Telegram.
+ */
+export const getTelegramWebApp = (): TelegramWebApp | null => {
+  if (typeof window === 'undefined') return null;
+  return window.Telegram?.WebApp ?? telegramWebApp;
+};
+
+/**
  * Initialize Telegram WebApp if available.
  */
 export const initializeTelegram = (): void => {
-  if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
-    telegramWebApp = (window as any).Telegram.WebApp;
+  if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+    telegramWebApp = window.Telegram.WebApp;
     telegramWebApp.ready?.();
     telegramWebApp.expand?.();
   }
@@ -28,7 +45,7 @@ export const initializeTelegram = (): void => {
  */
 export const isTelegramMiniApp = (): boolean => {
   if (typeof window === 'undefined') return false;
-  return !!(window as any).Telegram?.WebApp;
+  return !!window.Telegram?.WebApp;
 };
 
 /**

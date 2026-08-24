@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { verifyTelegramWebAppData } from '../utils/telegram';
+import { verifyTelegramWebAppData } from '../utils/telegram.js';
 
 describe('Telegram Utils', () => {
   it('should reject invalid signatures', () => {

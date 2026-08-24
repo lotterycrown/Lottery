@@ -19,8 +19,8 @@ export const useTelegramAuth = () => {
           return;
         }
 
-        webApp.ready();
-        webApp.expand();
+        webApp.ready?.();
+        webApp.expand?.();
 
         // Get initData from WebApp
         const initData = webApp.initData;

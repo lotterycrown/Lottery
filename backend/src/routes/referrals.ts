@@ -1,8 +1,8 @@
-import { Router, Request, Response } from 'express';
-import { authenticate } from '../middleware/auth';
-import { prisma } from '../db';
-import { logger } from '../utils/logger';
-import { AuthRequest } from '../types';
+import { Router, Response } from 'express';
+import { authenticate } from '../middleware/auth.js';
+import { prisma } from '../db/index.js';
+import { logger } from '../utils/logger.js';
+import { AuthRequest } from '../types/index.js';
 
 const router = Router();
 
@@ -40,7 +40,7 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
     const miniAppUrl = process.env.TELEGRAM_MINI_APP_URL || '';
     const referralLink = `${miniAppUrl}?startapp=${user.referralCode}`;
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         referralCode: user.referralCode,
@@ -57,7 +57,7 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     logger.error('Get referrals error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to get referrals',
       timestamp: Date.now(),
@@ -111,7 +111,7 @@ router.post('/:referralCode/accept', authenticate, async (req: AuthRequest, res:
 
     logger.info(`Referral created: ${referrer.id} -> ${userId}`);
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         referralId: referral.id,
@@ -121,7 +121,7 @@ router.post('/:referralCode/accept', authenticate, async (req: AuthRequest, res:
     });
   } catch (error) {
     logger.error('Accept referral error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to accept referral',
       timestamp: Date.now(),
@@ -136,7 +136,6 @@ router.post('/:referralCode/accept', authenticate, async (req: AuthRequest, res:
 router.post('/claim-reward', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
-    const { idempotencyKey } = req.body as { idempotencyKey: string };
 
     // Find qualified referrals
     const referrals = await prisma.referral.findMany({
@@ -154,7 +153,7 @@ router.post('/claim-reward', authenticate, async (req: AuthRequest, res: Respons
       });
     }
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         message: 'Referral rewards are processed automatically when referrals qualify',
@@ -163,7 +162,7 @@ router.post('/claim-reward', authenticate, async (req: AuthRequest, res: Respons
     });
   } catch (error) {
     logger.error('Claim referral reward error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to claim referral reward',
       timestamp: Date.now(),

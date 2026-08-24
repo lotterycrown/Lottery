@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
-import { prisma } from '../db';
-import { logger } from '../utils/logger';
+import { prisma } from '../db/index.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -8,7 +8,7 @@ const router = Router();
  * GET /health
  * Health check endpoint
  */
-router.get('/', async (req, res: Response) => {
+router.get('/', async (_req, res: Response) => {
   try {
     // Check database connection
     await prisma.$queryRaw`SELECT 1`;

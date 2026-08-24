@@ -1,9 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifyToken } from '../utils/jwt';
-import { prisma } from '../db';
-import { AuthenticationError, AuthorizationError } from '../utils/errors';
-import { AuthRequest, AuthenticatedUser } from '../types';
-import { logger } from '../utils/logger';
+import { verifyToken } from '../utils/jwt.js';
+import { prisma } from '../db/index.js';
+import { AuthRequest } from '../types/index.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Extract JWT from Authorization header
@@ -68,12 +67,12 @@ export const authenticate = async (
       crownTier: user.crownTier,
     };
 
-    req.clientIp = req.ip || req.connection.remoteAddress || 'unknown';
+    req.clientIp = req.ip || req.socket.remoteAddress || 'unknown';
 
-    next();
+    return next();
   } catch (error) {
     logger.error('Authentication error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Internal server error',
       timestamp: Date.now(),
@@ -102,7 +101,7 @@ export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction
     });
   }
 
-  next();
+  return next();
 };
 
 /**
@@ -110,7 +109,7 @@ export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction
  */
 export const optionalAuth = async (
   req: AuthRequest,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   try {
@@ -140,10 +139,10 @@ export const optionalAuth = async (
       };
     }
 
-    req.clientIp = req.ip || req.connection.remoteAddress || 'unknown';
-    next();
+    req.clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+    return next();
   } catch (error) {
     logger.error('Optional auth error:', error);
-    next();
+    return next();
   }
 };

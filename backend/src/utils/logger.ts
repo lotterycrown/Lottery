@@ -1,25 +1,25 @@
-import pino from 'pino';
+import { pino } from 'pino';
 
 const logLevel = process.env.LOG_LEVEL || 'info';
+const isProduction = process.env.NODE_ENV === 'production';
 
-const transport = (pino as any).transport
-  ? (pino as any).transport({
-      target: 'pino-pretty',
-      options: {
-        colorize: true,
-        singleLine: false,
-        translateTime: 'SYS:standard',
+// Pretty-print logs in development only; production uses plain JSON logs
+export const logger = isProduction
+  ? pino({ level: logLevel })
+  : pino({
+      level: logLevel,
+      transport: {
+        target: 'pino-pretty',
+        options: {
+          colorize: true,
+          singleLine: false,
+          translateTime: 'SYS:standard',
+        },
       },
-    })
-  : undefined;
-
-export const logger = pino({
-  level: logLevel,
-  ...(transport ? { transport } : {}),
-});
+    });
 
 export const createRequestLogger = () => {
-  return (req: { method: string; url: string }, res: unknown) => {
+  return (req: { method: string; url: string }): void => {
     logger.info(`${req.method} ${req.url}`);
   };
 };

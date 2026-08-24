@@ -10,10 +10,9 @@ import { GAME_CONFIG } from '../game/gameConfig';
 interface TapRewardProps {
   x: number;
   y: number;
-  opacity: number;
 }
 
-export const TapReward: React.FC<TapRewardProps> = ({ x, y, opacity }) => {
+export const TapReward: React.FC<TapRewardProps> = ({ x, y }) => {
   return (
     <motion.div
       className="fixed pointer-events-none text-sm font-bold text-bronze-400"

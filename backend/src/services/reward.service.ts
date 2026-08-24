@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../db/index.js';
 import { logger } from '../utils/logger.js';
 import { RewardResult } from '../types/index.js';
@@ -13,7 +14,7 @@ export const processReward = async (
   xp: number,
   type: string,
   idempotencyKey: string,
-  metadata?: any
+  metadata?: Prisma.InputJsonValue
 ): Promise<RewardResult> => {
   try {
     // Check if reward already processed (idempotency)

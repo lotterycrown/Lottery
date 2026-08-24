@@ -3,18 +3,16 @@
  * 3D-looking metallic crown with idle animations.
  */
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { GAME_CONFIG } from '../game/gameConfig';
 
 interface CrownProps {
-  scale?: number;
   onTap: (e: React.PointerEvent<HTMLDivElement>) => void;
   isAnimating?: boolean;
 }
 
 export const Crown: React.FC<CrownProps> = ({
-  scale = 1,
   onTap,
   isAnimating = false,
 }) => {

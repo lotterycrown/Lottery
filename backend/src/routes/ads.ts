@@ -1,13 +1,13 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
-import { validateBody } from '../middleware/validation';
-import { prisma } from '../db';
-import { processReward } from '../services/reward.service';
-import { logger } from '../utils/logger';
-import { AuthRequest } from '../types';
-import { CONSTANTS } from '../config/constants';
-import { ValidationError } from '../utils/errors';
+import { authenticate } from '../middleware/auth.js';
+import { validateBody } from '../middleware/validation.js';
+import { prisma } from '../db/index.js';
+import { processReward } from '../services/reward.service.js';
+import { logger } from '../utils/logger.js';
+import { AuthRequest } from '../types/index.js';
+import { CONSTANTS } from '../config/constants.js';
+import { ValidationError } from '../utils/errors.js';
 
 const router = Router();
 
@@ -87,7 +87,7 @@ router.post('/view', authenticate, validateBody(AdViewSchema), async (req: AuthR
 
     logger.info(`Ad view recorded for user ${userId}: ${provider}`);
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         transactionId: reward.transactionId,
@@ -108,7 +108,7 @@ router.post('/view', authenticate, validateBody(AdViewSchema), async (req: AuthR
         timestamp: Date.now(),
       });
     }
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to record ad view',
       timestamp: Date.now(),
@@ -120,11 +120,11 @@ router.post('/view', authenticate, validateBody(AdViewSchema), async (req: AuthR
  * GET /ads/config
  * Get ad provider configuration
  */
-router.get('/config', authenticate, async (req: AuthRequest, res: Response) => {
+router.get('/config', authenticate, async (_req: AuthRequest, res: Response) => {
   try {
     const provider = process.env.AD_PROVIDER || CONSTANTS.AD_PROVIDERS.NONE;
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         provider,
@@ -135,7 +135,7 @@ router.get('/config', authenticate, async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     logger.error('Get ad config error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to get ad config',
       timestamp: Date.now(),

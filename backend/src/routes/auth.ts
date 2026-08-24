@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
-import { authenticate, optionalAuth } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validation.js';
 import { findOrCreateUser, generateUserToken } from '../services/user.service.js';
 import { getTelegramUserFromInitData } from '../utils/telegram.js';
@@ -54,7 +54,7 @@ router.post(
 
     logger.info(`User logged in: ${user.id}`);
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         token,
@@ -94,7 +94,7 @@ router.get(
       });
     }
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         id: user.id,

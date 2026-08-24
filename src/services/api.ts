@@ -1,5 +1,5 @@
 // API Configuration
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -17,10 +17,15 @@ const fetchApi = async <T>(
 ): Promise<ApiResponse<T>> => {
   try {
     const token = localStorage.getItem('auth_token');
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers,
     };
+
+    if (options.headers) {
+      new Headers(options.headers).forEach((value, key) => {
+        headers[key] = value;
+      });
+    }
 
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
@@ -233,7 +238,7 @@ export const adApi = {
  */
 export const adminApi = {
   getConfig: () => fetchApi('/admin/config'),
-  updateConfig: (key: string, value: any, reason?: string) =>
+  updateConfig: (key: string, value: string | number | boolean, reason?: string) =>
     fetchApi('/admin/config', {
       method: 'PATCH',
       body: JSON.stringify({ key, value, reason }),

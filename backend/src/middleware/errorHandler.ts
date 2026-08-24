@@ -4,9 +4,11 @@ import { logger } from '../utils/logger.js';
 
 export const errorHandler = (
   err: Error | ApiError,
-  req: Request,
+  _req: Request,
   res: Response,
-  next: NextFunction
+  // Express identifies error-handling middleware by its 4-argument signature
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _next: NextFunction
 ) => {
   logger.error('Error handler:', {
     name: err.name,
@@ -24,15 +26,22 @@ export const errorHandler = (
   }
 
   // Unhandled error
-  res.status(500).json({
+  return res.status(500).json({
     success: false,
     error: 'Internal server error',
     timestamp: Date.now(),
   });
 };
 
+type AsyncRequestHandler = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => Promise<unknown>;
+
 // Async error wrapper
 export const asyncHandler =
-  (fn: Function) => (req: Request, res: Response, next: NextFunction) => {
+  (fn: AsyncRequestHandler) =>
+  (req: Request, res: Response, next: NextFunction): void => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };

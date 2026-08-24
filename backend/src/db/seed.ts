@@ -117,7 +117,7 @@ export const seedTasks = async () => {
           description: 'Reach level 30',
           type: CONSTANTS.TASK_TYPES.SPECIAL,
           requirement: 'Reach level 30 (Gold Crown)',
-          reward: BigInt(CONSTANTS.DEFAULT_TASK_REWARD_LARGE * BigInt(2)),
+          reward: BigInt(CONSTANTS.DEFAULT_TASK_REWARD_LARGE * 2),
           xpReward: CONSTANTS.DEFAULT_XP_PER_TASK_LARGE * 2,
           requiredLevel: 1,
           targetCount: 30,
