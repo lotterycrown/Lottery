@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     rootDir: backend
-    buildCommand: yarn install && yarn build && yarn prisma:migrate:prod
+    buildCommand: yarn install --production=false && yarn build && yarn prisma:migrate:prod
     startCommand: yarn start
     healthCheckPath: /health
     envVars:
