@@ -17,6 +17,13 @@
 - Env: `DATABASE_URL`, `JWT_SECRET`, `TELEGRAM_BOT_TOKEN`, `NODE_ENV=production`.
 
 ## Render deployment
+- backend build uses scripts/build.sh (POSIX sh) — inline ${VAR:-default} in package.json scripts fails in dash/sh on Render.
+- prisma and @prisma/client are pinned to EXACT 5.22.0 (no ^) — npx/caret resolves to Prisma 7 which breaks the schema.
+- Do NOT use npx in build scripts; it can fetch latest from registry instead of local node_modules.
+- All build-time tooling (typescript, @types/*, prisma CLI) is in dependencies because Render skips devDependencies with NODE_ENV=production.
+- Root build is self-contained: installs backend deps, builds backend, then frontend. Works whether Render builds from root or backend/.
+- Verified with clean-room production-only install + build + migrate + server start simulation.
+
 - prisma and @prisma/client are pinned to EXACT 5.22.0 (no ^) — npx/caret resolves to Prisma 7 which breaks the schema (datasource url removed in v7).
 - Do NOT use npx in build scripts; it can fetch latest from registry instead of local node_modules.
 - All build-time tooling (typescript, @types/*, prisma CLI) is in dependencies because Render skips devDependencies with NODE_ENV=production.
