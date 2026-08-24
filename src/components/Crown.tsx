@@ -60,107 +60,131 @@ export const Crown: React.FC<CrownProps> = ({
       whileHover={!isAnimating ? { scale: 1.05 } : {}}
       whileTap={isAnimating ? {} : { scale: GAME_CONFIG.crownTapScale }}
     >
-      {/* Crown SVG */}
+      {/* Crown SVG - realistic tiered crown */}
       <svg
-        width="280"
-        height="280"
+        width="300"
+        height="300"
         viewBox="0 0 280 280"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         className="drop-shadow-2xl"
         style={{ filter: `drop-shadow(0 0 40px ${tier.glowColor})` }}
       >
-        {/* Gradient definitions */}
         <defs>
-          <linearGradient id="crownGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" style={{ stopColor: light, stopOpacity: 1 }} />
-            <stop offset="50%" style={{ stopColor: mid, stopOpacity: 1 }} />
-            <stop offset="100%" style={{ stopColor: dark, stopOpacity: 1 }} />
+          {/* Metallic vertical gradient for the crown body */}
+          <linearGradient id="crownMetal" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={light} />
+            <stop offset="55%" stopColor={mid} />
+            <stop offset="100%" stopColor={dark} />
           </linearGradient>
-          <radialGradient id="crownHighlight" cx="35%" cy="35%">
-            <stop offset="0%" style={{ stopColor: '#ffffff', stopOpacity: 0.6 }} />
-            <stop offset="100%" style={{ stopColor: '#ffffff', stopOpacity: 0 }} />
+          {/* Radial sheen for 3D dome effect */}
+          <radialGradient id="crownSheen" cx="0.38" cy="0.3" r="0.75">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.5" />
+            <stop offset="45%" stopColor="#ffffff" stopOpacity="0.12" />
+            <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
           </radialGradient>
+          {/* Band gradient (slightly darker, horizontal) */}
+          <linearGradient id="bandGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={mid} />
+            <stop offset="50%" stopColor={dark} />
+            <stop offset="100%" stopColor={mid} />
+          </linearGradient>
+          {/* Gem gradient */}
+          <radialGradient id="gemGrad" cx="0.35" cy="0.35" r="0.8">
+            <stop offset="0%" stopColor="#ffffff" />
+            <stop offset="55%" stopColor={light} />
+            <stop offset="100%" stopColor={dark} />
+          </radialGradient>
+          <filter id="crownShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="6" stdDeviation="6" floodOpacity="0.35" floodColor="#000000" />
+          </filter>
         </defs>
 
-        {/* Base band */}
-        <ellipse cx="140" cy="180" rx="110" ry="35" fill="url(#crownGradient)" />
-        <ellipse
-          cx="140"
-          cy="175"
-          rx="110"
-          ry="30"
-          fill="url(#crownHighlight)"
-          opacity="0.4"
-        />
+        <g filter="url(#crownShadow)">
+          {/* Base band */}
+          <rect x="55" y="192" width="170" height="34" rx="10" fill="url(#bandGrad)" />
+          {/* Band top rim highlight */}
+          <rect x="55" y="192" width="170" height="6" rx="3" fill={light} opacity="0.7" />
+          {/* Band bottom rim */}
+          <rect x="55" y="220" width="170" height="6" rx="3" fill={dark} opacity="0.8" />
 
-        {/* Left peak */}
-        <path
-          d="M 70 180 L 50 80 L 90 160 Z"
-          fill="url(#crownGradient)"
-          filter="url(#shadow)"
-        />
-
-        {/* Center peak (tallest) */}
-        <path
-          d="M 140 180 L 120 40 L 160 40 L 140 180 Z"
-          fill="url(#crownGradient)"
-          filter="url(#shadow)"
-        />
-
-        {/* Right peak */}
-        <path
-          d="M 210 180 L 190 160 L 230 80 Z"
-          fill="url(#crownGradient)"
-          filter="url(#shadow)"
-        />
-
-        {/* Center highlight on main peak */}
-        <ellipse
-          cx="140"
-          cy="70"
-          rx="12"
-          ry="30"
-          fill="url(#crownHighlight)"
-          opacity="0.5"
-        />
-
-        {/* Jewel-like accent on center peak (always present) */}
-        <circle cx="140" cy="50" r="8" fill={light} opacity="0.85" />
-        <circle cx="140" cy="50" r="5" fill="#ffffff" opacity="0.6" />
-
-        {/* Tier gems: 2nd sub-tier adds side gems */}
-        {tier.gems >= 2 && (
-          <>
-            <circle cx="110" cy="100" r="6" fill={mid} opacity="0.85" />
-            <circle cx="110" cy="100" r="3.5" fill="#ffffff" opacity="0.6" />
-            <circle cx="170" cy="100" r="6" fill={mid} opacity="0.85" />
-            <circle cx="170" cy="100" r="3.5" fill="#ffffff" opacity="0.6" />
-          </>
-        )}
-
-        {/* Tier gems: 3rd sub-tier adds a large center gem + band studs */}
-        {tier.gems >= 3 && (
-          <>
-            <circle cx="140" cy="120" r="9" fill={light} opacity="0.9" />
-            <circle cx="140" cy="120" r="5.5" fill="#ffffff" opacity="0.65" />
-            <circle cx="95" cy="178" r="4" fill={light} opacity="0.8" />
-            <circle cx="140" cy="183" r="4" fill={light} opacity="0.8" />
-            <circle cx="185" cy="178" r="4" fill={light} opacity="0.8" />
-          </>
-        )}
-
-        {/* Shadow filter */}
-        <filter id="shadow">
-          <feDropShadow
-            dx="2"
-            dy="4"
-            stdDeviation="3"
-            floodOpacity="0.3"
-            floodColor="#000000"
+          {/* Crown body: smooth dome from band up to the peaks */}
+          <path
+            d="M 60 196
+               C 60 150 78 128 98 120
+               L 140 96
+               L 182 120
+               C 202 128 220 150 220 196
+               Z"
+            fill="url(#crownMetal)"
           />
-        </filter>
+          {/* 3D sheen overlay on body */}
+          <path
+            d="M 60 196
+               C 60 150 78 128 98 120
+               L 140 96
+               L 182 120
+               C 202 128 220 150 220 196
+               Z"
+            fill="url(#crownSheen)"
+          />
+
+          {/* Peaks (spires) with ball finials: left, mid-left, center, mid-right, right */}
+          {/* Left spire */}
+          <path d="M 74 196 L 88 118 L 104 128 L 96 196 Z" fill="url(#crownMetal)" />
+          <circle cx="88" cy="112" r="9" fill="url(#crownMetal)" />
+          <circle cx="85" cy="109" r="3" fill="#ffffff" opacity="0.55" />
+
+          {/* Mid-left spire */}
+          <path d="M 106 196 L 118 96 L 136 104 L 128 196 Z" fill="url(#crownMetal)" />
+          <circle cx="120" cy="90" r="10" fill="url(#crownMetal)" />
+          <circle cx="117" cy="87" r="3.2" fill="#ffffff" opacity="0.55" />
+
+          {/* Center spire (tallest) */}
+          <path d="M 132 196 L 140 74 L 150 196 Z" fill="url(#crownMetal)" />
+          <circle cx="140" cy="66" r="11" fill="url(#crownMetal)" />
+          <circle cx="137" cy="63" r="3.5" fill="#ffffff" opacity="0.6" />
+
+          {/* Mid-right spire */}
+          <path d="M 152 196 L 144 104 L 162 96 L 174 196 Z" fill="url(#crownMetal)" />
+          <circle cx="160" cy="90" r="10" fill="url(#crownMetal)" />
+          <circle cx="157" cy="87" r="3.2" fill="#ffffff" opacity="0.55" />
+
+          {/* Right spire */}
+          <path d="M 184 196 L 176 128 L 192 118 L 206 196 Z" fill="url(#crownMetal)" />
+          <circle cx="192" cy="112" r="9" fill="url(#crownMetal)" />
+          <circle cx="189" cy="109" r="3" fill="#ffffff" opacity="0.55" />
+
+          {/* Center diamond jewel (always) */}
+          <path
+            d="M 140 128 L 156 150 L 140 176 L 124 150 Z"
+            fill="url(#gemGrad)"
+            stroke={dark}
+            strokeWidth="1.5"
+          />
+          <path d="M 140 128 L 148 150 L 140 176 L 132 150 Z" fill="#ffffff" opacity="0.25" />
+
+          {/* Tier 2: two side gems */}
+          {tier.gems >= 2 && (
+            <>
+              <path d="M 96 148 L 106 162 L 96 178 L 86 162 Z" fill="url(#gemGrad)" stroke={dark} strokeWidth="1" />
+              <path d="M 184 148 L 194 162 L 184 178 L 174 162 Z" fill="url(#gemGrad)" stroke={dark} strokeWidth="1" />
+            </>
+          )}
+
+          {/* Tier 3: band studs + extra forehead gem */}
+          {tier.gems >= 3 && (
+            <>
+              <circle cx="85" cy="209" r="5" fill="url(#gemGrad)" stroke={dark} strokeWidth="1" />
+              <circle cx="118" cy="209" r="5" fill="url(#gemGrad)" stroke={dark} strokeWidth="1" />
+              <circle cx="162" cy="209" r="5" fill="url(#gemGrad)" stroke={dark} strokeWidth="1" />
+              <circle cx="195" cy="209" r="5" fill="url(#gemGrad)" stroke={dark} strokeWidth="1" />
+              <path d="M 140 100 L 148 112 L 140 124 L 132 112 Z" fill="url(#gemGrad)" stroke={dark} strokeWidth="1" />
+            </>
+          )}
+        </g>
       </svg>
     </motion.div>
   );
 };
+
