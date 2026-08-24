@@ -105,26 +105,26 @@ app.use(errorHandler);
 // ============================================================================
 
 const start = async () => {
-  try {
-    // Test database connection
-    await prisma.$queryRaw`SELECT 1`;
-    logger.info('✅ Database connection successful');
+  // Start server immediately - health check must respond even if DB is not ready
+  const server = app.listen(Number(PORT), '0.0.0.0', () => {
+    logger.info(`🚀 Server running on port ${PORT}`);
+    logger.info(`📝 Environment: ${NODE_ENV}`);
+    logger.info(`🔗 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
+    logger.info(`🤖 Telegram Bot: ${process.env.TELEGRAM_BOT_USERNAME || 'not configured'}`);
+  });
 
-    // Start server
-    app.listen(Number(PORT), '0.0.0.0', () => {
-      logger.info(`🚀 Server running on port ${PORT}`);
-      logger.info(`📝 Environment: ${NODE_ENV}`);
-      logger.info(`🔗 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
-      logger.info(`🤖 Telegram Bot: ${process.env.TELEGRAM_BOT_USERNAME || 'not configured'}`);
+  // Test database connection in background - don't block startup
+  prisma.$queryRaw`SELECT 1`
+    .then(() => logger.info('✅ Database connection successful'))
+    .catch((error: unknown) => {
+      if (error instanceof Error) {
+        logger.error('⚠️  Database connection failed (server still running):', error.message);
+      } else {
+        logger.error('⚠️  Database connection failed with unknown error:', error);
+      }
     });
-  } catch (error) {
-    if (error instanceof Error) {
-      logger.error('❌ Failed to start server:', error.message);
-    } else {
-      logger.error('❌ Failed to start server with unknown error:', error);
-    }
-    process.exit(1);
-  }
+
+  return server;
 };
 
 start();

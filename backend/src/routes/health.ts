@@ -1,33 +1,28 @@
 import { Router, Response } from 'express';
 import { prisma } from '../db/index.js';
-import { logger } from '../utils/logger.js';
 
 const router = Router();
 
 /**
  * GET /health
- * Health check endpoint
+ * Liveness probe - always returns 200 so Render keeps the service alive.
+ * Database status is reported in the body, not the HTTP status code.
  */
 router.get('/', async (_req, res: Response) => {
+  let dbStatus = 'connected';
   try {
-    // Check database connection
     await prisma.$queryRaw`SELECT 1`;
-
-    res.json({
-      success: true,
-      status: 'healthy',
-      timestamp: Date.now(),
-      version: '1.0.0',
-    });
-  } catch (error) {
-    logger.error('Health check failed:', error);
-    res.status(503).json({
-      success: false,
-      status: 'unhealthy',
-      error: 'Database connection failed',
-      timestamp: Date.now(),
-    });
+  } catch {
+    dbStatus = 'disconnected';
   }
+
+  res.json({
+    success: true,
+    status: dbStatus === 'connected' ? 'healthy' : 'degraded',
+    database: dbStatus,
+    timestamp: Date.now(),
+    version: '1.0.0',
+  });
 });
 
 export default router;
