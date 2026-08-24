@@ -131,29 +131,29 @@ export const Crown: React.FC<CrownProps> = ({
 
           {/* Peaks (spires) with ball finials: left, mid-left, center, mid-right, right */}
           {/* Left spire */}
-          <path d="M 74 196 L 88 118 L 104 128 L 96 196 Z" fill="url(#crownMetal)" />
-          <circle cx="88" cy="112" r="9" fill="url(#crownMetal)" />
-          <circle cx="85" cy="109" r="3" fill="#ffffff" opacity="0.55" />
+          <path d="M 78 196 L 88 112 L 98 196 Z" fill="url(#crownMetal)" />
+          <circle cx="88" cy="108" r="8" fill="url(#crownMetal)" />
+          <circle cx="86" cy="105" r="2.6" fill="#ffffff" opacity="0.6" />
 
           {/* Mid-left spire */}
-          <path d="M 106 196 L 118 96 L 136 104 L 128 196 Z" fill="url(#crownMetal)" />
-          <circle cx="120" cy="90" r="10" fill="url(#crownMetal)" />
-          <circle cx="117" cy="87" r="3.2" fill="#ffffff" opacity="0.55" />
+          <path d="M 110 196 L 122 92 L 134 196 Z" fill="url(#crownMetal)" />
+          <circle cx="122" cy="86" r="9" fill="url(#crownMetal)" />
+          <circle cx="120" cy="83" r="2.8" fill="#ffffff" opacity="0.6" />
 
           {/* Center spire (tallest) */}
-          <path d="M 132 196 L 140 74 L 150 196 Z" fill="url(#crownMetal)" />
-          <circle cx="140" cy="66" r="11" fill="url(#crownMetal)" />
-          <circle cx="137" cy="63" r="3.5" fill="#ffffff" opacity="0.6" />
+          <path d="M 133 196 L 141 70 L 149 196 Z" fill="url(#crownMetal)" />
+          <circle cx="141" cy="63" r="10" fill="url(#crownMetal)" />
+          <circle cx="139" cy="60" r="3" fill="#ffffff" opacity="0.65" />
 
           {/* Mid-right spire */}
-          <path d="M 152 196 L 144 104 L 162 96 L 174 196 Z" fill="url(#crownMetal)" />
-          <circle cx="160" cy="90" r="10" fill="url(#crownMetal)" />
-          <circle cx="157" cy="87" r="3.2" fill="#ffffff" opacity="0.55" />
+          <path d="M 146 196 L 158 92 L 170 196 Z" fill="url(#crownMetal)" />
+          <circle cx="158" cy="86" r="9" fill="url(#crownMetal)" />
+          <circle cx="156" cy="83" r="2.8" fill="#ffffff" opacity="0.6" />
 
           {/* Right spire */}
-          <path d="M 184 196 L 176 128 L 192 118 L 206 196 Z" fill="url(#crownMetal)" />
-          <circle cx="192" cy="112" r="9" fill="url(#crownMetal)" />
-          <circle cx="189" cy="109" r="3" fill="#ffffff" opacity="0.55" />
+          <path d="M 182 196 L 192 112 L 202 196 Z" fill="url(#crownMetal)" />
+          <circle cx="192" cy="108" r="8" fill="url(#crownMetal)" />
+          <circle cx="190" cy="105" r="2.6" fill="#ffffff" opacity="0.6" />
 
           {/* Center diamond jewel (always) */}
           <path
