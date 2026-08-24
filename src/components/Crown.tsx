@@ -1,54 +1,27 @@
 /**
- * Crown rendered exactly like the Flutter CrownPainter:
- * 5-spike crown silhouette, tier-driven metal gradient, and level-based gems.
+ * Premium bronze crown component.
+ * 3D-looking metallic crown with idle animations.
  */
 
 import React, { useRef } from 'react';
 import { motion } from 'framer-motion';
-import { GAME_CONFIG } from '../game/gameConfig';
+import { GAME_CONFIG, getCrownTierInfo, CrownTierInfo } from '../game/gameConfig';
 
 interface CrownProps {
   scale?: number;
-  level?: number;
   crownTier?: string;
   onTap: (e: React.PointerEvent<HTMLDivElement>) => void;
   isAnimating?: boolean;
 }
 
-const METALS: Record<'bronze' | 'silver' | 'gold', [string, string]> = {
-  bronze: ['#CD7F32', '#A0522D'],
-  silver: ['#E0E0E0', '#757575'],
-  gold: ['#FFD700', '#DAA520'],
-};
-
-const MYTHIC: [string, string, string] = ['#FFD700', '#FFF8DC', '#B8860B'];
-
-const tierMetal = (name: string): 'bronze' | 'silver' | 'gold' => {
-  if (name.startsWith('silver')) return 'silver';
-  if (name.startsWith('gold')) return 'gold';
-  return 'bronze';
-};
-
-const gemColorFor = (level: number): string | null => {
-  if (level <= 30) return null;
-  if (level <= 60) return '#DC143C';
-  if (level <= 80) return '#1E90FF';
-  return '#50C878';
-};
-
-const glowFor = (level: number, gemColor: string | null): string => {
-  if (level <= 60 || !gemColor) return 'none';
-  const radius = (level - 60) * 0.8;
-  return `drop-shadow(0 0 ${radius}px ${gemColor})`;
-};
-
 export const Crown: React.FC<CrownProps> = ({
   scale = 1,
-  level = 1,
   crownTier = 'bronze_1',
   onTap,
   isAnimating = false,
 }) => {
+  const tier: CrownTierInfo = getCrownTierInfo(crownTier);
+  const [light, mid, dark] = tier.gradient;
   const crownRef = useRef<HTMLDivElement>(null);
   const prefersReducedMotion =
     typeof window !== 'undefined' &&
@@ -66,20 +39,10 @@ export const Crown: React.FC<CrownProps> = ({
     }
   };
 
-  const metal = tierMetal(crownTier);
-  const gemColor = gemColorFor(level);
-  const glow = glowFor(level, gemColor);
-
-  const isMythic = level > 90;
-  const stops = isMythic ? MYTHIC : METALS[metal];
-
-  const crownPath =
-    'M 10 80 L 15 35 L 35 55 L 50 20 L 65 55 L 85 35 L 90 80 Z';
-
   return (
     <motion.div
       ref={crownRef}
-      className="cursor-pointer select-none focus:outline-none rounded-full"
+      className="cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-bronze-400 rounded-full"
       onPointerDown={handlePointerDown}
       role="button"
       tabIndex={0}
@@ -96,50 +59,132 @@ export const Crown: React.FC<CrownProps> = ({
       }}
       whileHover={!isAnimating ? { scale: 1.05 } : {}}
       whileTap={isAnimating ? {} : { scale: GAME_CONFIG.crownTapScale }}
-      style={{ filter: glow }}
     >
+      {/* Crown SVG - realistic tiered crown */}
       <svg
         width="300"
         height="300"
-        viewBox="0 0 100 100"
+        viewBox="0 0 280 280"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
+        className="drop-shadow-2xl"
+        style={{ filter: `drop-shadow(0 0 40px ${tier.glowColor})` }}
       >
         <defs>
-          <linearGradient id="crownBody" x1="0" y1="0" x2="0" y2="1">
-            {isMythic ? (
-              <>
-                <stop offset="0%" stopColor={stops[0]} />
-                <stop offset="50%" stopColor={stops[1]} />
-                <stop offset="100%" stopColor={stops[2]} />
-              </>
-            ) : (
-              <>
-                <stop offset="0%" stopColor={stops[0]} />
-                <stop offset="100%" stopColor={stops[1]} />
-              </>
-            )}
+          {/* Metallic vertical gradient for the crown body */}
+          <linearGradient id="crownMetal" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={light} />
+            <stop offset="55%" stopColor={mid} />
+            <stop offset="100%" stopColor={dark} />
           </linearGradient>
-          <linearGradient id="crownShine" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.35" />
-            <stop offset="60%" stopColor="#ffffff" stopOpacity="0" />
+          {/* Radial sheen for 3D dome effect */}
+          <radialGradient id="crownSheen" cx="0.38" cy="0.3" r="0.75">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.5" />
+            <stop offset="45%" stopColor="#ffffff" stopOpacity="0.12" />
+            <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+          </radialGradient>
+          {/* Band gradient (slightly darker, horizontal) */}
+          <linearGradient id="bandGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={mid} />
+            <stop offset="50%" stopColor={dark} />
+            <stop offset="100%" stopColor={mid} />
           </linearGradient>
+          {/* Gem gradient */}
+          <radialGradient id="gemGrad" cx="0.35" cy="0.35" r="0.8">
+            <stop offset="0%" stopColor="#ffffff" />
+            <stop offset="55%" stopColor={light} />
+            <stop offset="100%" stopColor={dark} />
+          </radialGradient>
+          <filter id="crownShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="6" stdDeviation="6" floodOpacity="0.35" floodColor="#000000" />
+          </filter>
         </defs>
 
-        <path d={crownPath} fill="url(#crownBody)" stroke="#00000022" strokeWidth="0.5" />
-        <path d={crownPath} fill="url(#crownShine)" />
+        <g filter="url(#crownShadow)">
+          {/* Base band */}
+          <rect x="55" y="192" width="170" height="34" rx="10" fill="url(#bandGrad)" />
+          {/* Band top rim highlight */}
+          <rect x="55" y="192" width="170" height="6" rx="3" fill={light} opacity="0.7" />
+          {/* Band bottom rim */}
+          <rect x="55" y="220" width="170" height="6" rx="3" fill={dark} opacity="0.8" />
 
-        {gemColor && (
-          <circle cx="50" cy="45" r="5" fill={gemColor} stroke="#ffffff" strokeOpacity="0.4" strokeWidth="0.8" />
-        )}
+          {/* Crown body: smooth dome from band up to the peaks */}
+          <path
+            d="M 60 196
+               C 60 150 78 128 98 120
+               L 140 96
+               L 182 120
+               C 202 128 220 150 220 196
+               Z"
+            fill="url(#crownMetal)"
+          />
+          {/* 3D sheen overlay on body */}
+          <path
+            d="M 60 196
+               C 60 150 78 128 98 120
+               L 140 96
+               L 182 120
+               C 202 128 220 150 220 196
+               Z"
+            fill="url(#crownSheen)"
+          />
 
-        {level > 60 && gemColor && (
-          <>
-            <circle cx="30" cy="60" r="3.5" fill={gemColor} stroke="#ffffff" strokeOpacity="0.4" strokeWidth="0.6" />
-            <circle cx="70" cy="60" r="3.5" fill={gemColor} stroke="#ffffff" strokeOpacity="0.4" strokeWidth="0.6" />
-          </>
-        )}
+          {/* Peaks (spires) with ball finials: left, mid-left, center, mid-right, right */}
+          {/* Left spire */}
+          <path d="M 74 196 L 88 118 L 104 128 L 96 196 Z" fill="url(#crownMetal)" />
+          <circle cx="88" cy="112" r="9" fill="url(#crownMetal)" />
+          <circle cx="85" cy="109" r="3" fill="#ffffff" opacity="0.55" />
+
+          {/* Mid-left spire */}
+          <path d="M 106 196 L 118 96 L 136 104 L 128 196 Z" fill="url(#crownMetal)" />
+          <circle cx="120" cy="90" r="10" fill="url(#crownMetal)" />
+          <circle cx="117" cy="87" r="3.2" fill="#ffffff" opacity="0.55" />
+
+          {/* Center spire (tallest) */}
+          <path d="M 132 196 L 140 74 L 150 196 Z" fill="url(#crownMetal)" />
+          <circle cx="140" cy="66" r="11" fill="url(#crownMetal)" />
+          <circle cx="137" cy="63" r="3.5" fill="#ffffff" opacity="0.6" />
+
+          {/* Mid-right spire */}
+          <path d="M 152 196 L 144 104 L 162 96 L 174 196 Z" fill="url(#crownMetal)" />
+          <circle cx="160" cy="90" r="10" fill="url(#crownMetal)" />
+          <circle cx="157" cy="87" r="3.2" fill="#ffffff" opacity="0.55" />
+
+          {/* Right spire */}
+          <path d="M 184 196 L 176 128 L 192 118 L 206 196 Z" fill="url(#crownMetal)" />
+          <circle cx="192" cy="112" r="9" fill="url(#crownMetal)" />
+          <circle cx="189" cy="109" r="3" fill="#ffffff" opacity="0.55" />
+
+          {/* Center diamond jewel (always) */}
+          <path
+            d="M 140 128 L 156 150 L 140 176 L 124 150 Z"
+            fill="url(#gemGrad)"
+            stroke={dark}
+            strokeWidth="1.5"
+          />
+          <path d="M 140 128 L 148 150 L 140 176 L 132 150 Z" fill="#ffffff" opacity="0.25" />
+
+          {/* Tier 2: two side gems */}
+          {tier.gems >= 2 && (
+            <>
+              <path d="M 96 148 L 106 162 L 96 178 L 86 162 Z" fill="url(#gemGrad)" stroke={dark} strokeWidth="1" />
+              <path d="M 184 148 L 194 162 L 184 178 L 174 162 Z" fill="url(#gemGrad)" stroke={dark} strokeWidth="1" />
+            </>
+          )}
+
+          {/* Tier 3: band studs + extra forehead gem */}
+          {tier.gems >= 3 && (
+            <>
+              <circle cx="85" cy="209" r="5" fill="url(#gemGrad)" stroke={dark} strokeWidth="1" />
+              <circle cx="118" cy="209" r="5" fill="url(#gemGrad)" stroke={dark} strokeWidth="1" />
+              <circle cx="162" cy="209" r="5" fill="url(#gemGrad)" stroke={dark} strokeWidth="1" />
+              <circle cx="195" cy="209" r="5" fill="url(#gemGrad)" stroke={dark} strokeWidth="1" />
+              <path d="M 140 100 L 148 112 L 140 124 L 132 112 Z" fill="url(#gemGrad)" stroke={dark} strokeWidth="1" />
+            </>
+          )}
+        </g>
       </svg>
     </motion.div>
   );
 };
+
