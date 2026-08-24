@@ -17,6 +17,11 @@
 - Env: `DATABASE_URL`, `JWT_SECRET`, `TELEGRAM_BOT_TOKEN`, `NODE_ENV=production`.
 
 ## Render deployment
+- prisma and @prisma/client are pinned to EXACT 5.22.0 (no ^) — npx/caret resolves to Prisma 7 which breaks the schema (datasource url removed in v7).
+- Do NOT use npx in build scripts; it can fetch latest from registry instead of local node_modules.
+- All build-time tooling (typescript, @types/*, prisma CLI) is in dependencies because Render skips devDependencies with NODE_ENV=production.
+- Verified with clean-room production-only install + build + migrate + server start simulation.
+
 - Render installs with NODE_ENV=production which SKIPS devDependencies — everything needed at build time must be in `dependencies`: typescript, tsx, @types/*, prisma CLI, @types/node.
 - Verified by simulating a production-only install (`yarn install --production`) + build in a clean checkout.
 
